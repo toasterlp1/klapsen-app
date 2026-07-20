@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Bestenliste</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<style>
+  :root{
+    --bg:#0a0f1e; --panel:#111a30; --panel-border:#1e2a4a;
+    --ink:#eef1f8; --muted:#8b96b3; --accent:#ff4d4d; --gold:#f5c542;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Inter',sans-serif;min-height:100vh;padding:28px 16px 80px;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+  h1{
+    font-family:'Anton',sans-serif;font-size:clamp(36px,7vw,58px);
+    letter-spacing:2px;text-transform:uppercase;margin:0 0 6px;
+  }
+  h1 span{color:var(--accent);}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 26px;}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+  .tab{
+    background:var(--panel);border:1px solid var(--panel-border);color:var(--muted);
+    padding:10px 16px;border-radius:10px;font-weight:600;font-size:13px;
+    cursor:pointer;transition:border-color .2s, color .2s;font-family:'Inter',sans-serif;
+  }
+  .tab:hover{border-color:var(--accent);color:var(--ink);}
+  .tab.aktiv{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .karte{
+    background:var(--panel);border:1px solid var(--panel-border);
+    border-radius:14px;overflow:hidden;
+  }
+  .zeile{
+    display:grid;grid-template-columns:50px 48px 1fr 80px 90px 70px;
+    align-items:center;gap:12px;padding:13px 18px;
+    border-bottom:1px solid var(--panel-border);
+  }
+  .zeile:last-child{border-bottom:none;}
+  .kopf{
+    background:#0d1526;color:var(--muted);font-size:11px;
+    text-transform:uppercase;letter-spacing:1.5px;font-weight:800;
+  }
+  .rang{font-family:'Anton',sans-serif;font-size:24px;color:var(--muted);}
+  .zeile.erster{background:linear-gradient(90deg,rgba(245,197,66,.10),transparent);}
+  .zeile.erster .rang{color:var(--gold);}
+  .avatar{
+    width:40px;height:40px;border-radius:50%;object-fit:cover;
+    border:2px solid var(--panel-border);background:#0a0f1e;
+  }
+  .zeile.erster .avatar{border-color:var(--gold);}
+  .platzhalter{
+    width:40px;height:40px;border-radius:50%;
+    border:2px solid var(--panel-border);background:#0a0f1e;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Anton',sans-serif;font-size:16px;color:var(--muted);
+  }
+  .name{font-weight:800;font-size:16px;}
+  .wert{text-align:right;font-family:'Anton',sans-serif;font-size:20px;}
+  .wert.klein{font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:var(--muted);}
+  .leer{padding:56px 20px;text-align:center;color:var(--muted);font-size:15px;}
+  @media (max-width:600px){
+    .zeile{grid-template-columns:36px 38px 1fr 56px 66px;gap:8px;padding:11px 12px;}
+    .zeile > :nth-child(6), .kopf > :nth-child(6){display:none;}
+    .avatar, .platzhalter{width:34px;height:34px;}
+    .name{font-size:14px;}
+    .wert{font-size:17px;}
+  }
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Besten<span>liste</span></h1>
+  <p class="sub">Alle Formate, alle Runden.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="karte" id="tabelle"><div class="leer">Wird geladen…</div></div>
+</div>
+
+<script src="../bestenliste.js"></script>
+<script>
+let daten = null;
+let aktiv = 'gesamt';
+
+function bild(name){
+  const url = (typeof avatarFor === 'function') ? avatarFor(name) : null;
+  if(url) return '<img class="avatar" src="' + url + '" alt="">';
+  return '<div class="platzhalter">' + (name ? name[0].toUpperCase() : '?') + '</div>';
+}
+
+function zeichneTabs(){
+  const t = document.getElementById('tabs');
+  const alle = [{ key:'gesamt', name:'Gesamt' }].concat(daten.formate);
+  t.innerHTML = alle.map(f =>
+    '<button class="tab' + (f.key === aktiv ? ' aktiv' : '') + '" data-key="' + f.key + '">' + f.name + '</button>'
+  ).join('');
+  Array.from(t.querySelectorAll('.tab')).forEach(b => {
+    b.addEventListener('click', () => {
+      aktiv = b.dataset.key;
+      zeichneTabs();
+      zeichneTabelle();
+    });
+  });
+}
+
+function zeichneTabelle(){
+  const ziel = document.getElementById('tabelle');
+  let liste;
+  if(aktiv === 'gesamt'){
+    liste = daten.gesamt;
+  } else {
+    const f = daten.formate.find(x => x.key === aktiv);
+    liste = f ? f.rangliste : [];
+  }
+
+  if(!liste.length){
+    ziel.innerHTML = '<div class="leer">Noch keine Ergebnisse.</div>';
+    return;
+  }
+
+  const kopf =
+    '<div class="zeile kopf">' +
+      '<div>Rang</div><div></div><div>Spieler</div>' +
+      '<div style="text-align:right">Siege</div>' +
+      '<div style="text-align:right">Punkte</div>' +
+      '<div style="text-align:right">Spiele</div>' +
+    '</div>';
+
+  const zeilen = liste.map((s, i) =>
+    '<div class="zeile' + (i === 0 ? ' erster' : '') + '">' +
+      '<div class="rang">' + (i + 1) + '</div>' +
+      bild(s.spieler) +
+      '<div class="name">' + s.spieler + '</div>' +
+      '<div class="wert">' + s.siege + '</div>' +
+      '<div class="wert">' + s.punkte.toLocaleString('de-CH') + '</div>' +
+      '<div class="wert klein">' + s.spiele + '</div>' +
+    '</div>'
+  ).join('');
+
+  ziel.innerHTML = kopf + zeilen;
+}
+
+async function start(){
+  if(!window.KA_SB){
+    document.getElementById('tabelle').innerHTML =
+      '<div class="leer">Nicht eingeloggt. Seite neu laden.</div>';
+    return;
+  }
+  daten = await ladeBestenliste();
+  if(!daten){
+    document.getElementById('tabelle').innerHTML =
+      '<div class="leer">Konnte nicht laden. Konsole prüfen.</div>';
+    return;
+  }
+  zeichneTabs();
+  zeichneTabelle();
+}
+
+setTimeout(start, 300);
+</script>
+
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+</body>
+</html>

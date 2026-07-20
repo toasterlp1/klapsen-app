@@ -1,0 +1,28 @@
+
+const BLUFF_FRAGEN = [
+  { frage: "In einigen Schweizer Gemeinden ist es verboten, sonntags ___.", antwort: "die Wäsche im Freien aufzuhängen" },
+  { frage: "In Japan gibt es einen Wettbewerb, bei dem Teilnehmer ___ so lange wie möglich machen.", antwort: "gar nichts" },
+  { frage: "Eine Gruppe Flamingos nennt man ___.", antwort: "eine Flamboyance" },
+  { frage: "Bevor es Radiergummis gab, benutzten Leute ___, um Bleistift zu entfernen.", antwort: "altbackenes Brot" },
+  { frage: "Der Name «Nintendo» bedeutet übersetzt ungefähr ___.", antwort: "überlasse das Glück dem Himmel" },
+  { frage: "Astronauten dürfen im All kein ___ essen, weil die Krümel gefährlich sind.", antwort: "normales Brot" },
+  { frage: "Der teuerste Kaffee der Welt wird aus Bohnen gemacht, die vorher ___.", antwort: "von einer Schleichkatze verdaut wurden" },
+  { frage: "Ein Blauwal-Herz ist ungefähr so gross wie ___.", antwort: "ein Kleinwagen" },
+  { frage: "In Finnland gibt es eine Weltmeisterschaft im ___.", antwort: "Ehefrauentragen" },
+  { frage: "Bananen sind botanisch gesehen eigentlich ___.", antwort: "Beeren" },
+  { frage: "Ein Krake hat ___ Herzen.", antwort: "drei" },
+  { frage: "Das lauteste Tier der Welt gemessen in Dezibel ist ___.", antwort: "der Pistolenkrebs" },
+  { frage: "Honig kann nach tausenden Jahren noch ___.", antwort: "gegessen werden" },
+  { frage: "Der Begriff «Bluetooth» kommt von ___.", antwort: "einem dänischen Wikingerkönig" },
+  { frage: "In der Schweiz darf man Meerschweinchen nicht ___.", antwort: "einzeln halten" },
+  { frage: "Die Wolken auf der Venus bestehen hauptsächlich aus ___.", antwort: "Schwefelsäure" },
+  { frage: "Der grösste je gefundene Pilz ist ___.", antwort: "grösser als 900 Hektar" },
+  { frage: "Kühe haben nachweislich ___.", antwort: "beste Freundinnen" },
+  { frage: "Der Eiffelturm wird im Sommer bis zu ___ höher.", antwort: "15 Zentimeter" },
+  { frage: "Ein Schnecke kann bis zu ___ am Stück schlafen.", antwort: "drei Jahre" },
+  { frage: "Die erste Ware, die je über das Internet verkauft wurde, war ___.", antwort: "eine Tüte Marihuana" },
+  { frage: "Wombat-Kot hat die Form ___.", antwort: "eines Würfels" },
+  { frage: "In Schottland gibt es ein Gesetz, das ___ verbietet.", antwort: "einen Wal als Fund für sich zu behalten (gehört der Krone)" },
+  { frage: "Der durchschnittliche Mensch verbringt etwa ___ seines Lebens auf der Toilette.", antwort: "drei Jahre" },
+  { frage: "Ketchup wurde ursprünglich verkauft als ___.", antwort: "Medizin" }
+];

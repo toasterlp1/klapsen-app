@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>ChatDuell — Buzzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#12172a; --panel-border:#232b45;
+    --ink:#eef1f8; --muted:#6b7488; --accent:#00e5c7; --warn:#ffd166; --bad:#ff3860;
+    --teamA:#ff3860; --teamB:#3a7bff;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:radial-gradient(ellipse at 50% 0%, #131b33 0%, var(--bg) 65%);
+    color:var(--ink);font-family:'Inter',sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .wrap{width:100%;max-width:420px;text-align:center;}
+  .view{transition:opacity .35s var(--ease);}
+  h1{font-family:'Anton',sans-serif;letter-spacing:2px;font-size:26px;margin-bottom:24px;text-shadow:0 0 18px rgba(0,229,199,.25);}
+  input[type=text], select{
+    width:100%;background:#0d1220;border:1px solid var(--panel-border);color:var(--ink);
+    padding:14px;border-radius:12px;font-size:16px;margin-bottom:10px;text-align:center;
+    transition:border-color .25s var(--ease);
+  }
+  input[type=text]:focus, select:focus{outline:none;border-color:var(--accent);}
+  .hint{font-size:13px;color:var(--muted);min-height:18px;margin-bottom:10px;}
+  button.join{
+    width:100%;padding:14px;border:none;border-radius:12px;background:var(--accent);
+    color:#04120f;font-weight:900;font-size:16px;cursor:pointer;transition:transform .15s var(--ease);
+  }
+  button.join:active{transform:scale(.97);}
+  .buzz-btn{
+    width:260px;height:260px;border-radius:50%;border:none;
+    background:radial-gradient(circle at 35% 30%, #ff5470, var(--bad));
+    box-shadow:0 0 50px rgba(255,56,96,.5);
+    color:#fff;font-family:'Anton',sans-serif;font-size:40px;letter-spacing:2px;
+    cursor:pointer;transition:transform .12s var(--ease), box-shadow .3s var(--ease), background .3s var(--ease);
+    animation:buzzReady 2s ease-in-out infinite;
+  }
+  @keyframes buzzReady{
+    0%,100%{box-shadow:0 0 50px rgba(255,56,96,.5);}
+    50%{box-shadow:0 0 70px rgba(255,56,96,.75);}
+  }
+  .buzz-btn:active{transform:scale(.94);}
+  .buzz-btn:disabled{
+    background:#1b2138;box-shadow:none;color:var(--muted);cursor:not-allowed;animation:none;
+  }
+  .status{margin-top:22px;font-size:15px;color:var(--muted);transition:color .25s var(--ease);}
+  .status b{color:var(--ink);}
+  .teamA{color:var(--teamA);font-weight:700;}
+  .teamB{color:var(--teamB);font-weight:700;}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+<div class="wrap">
+  <div class="view" id="joinView">
+    <h1>CHATDUELL</h1>
+    <select id="nameInput"><option value="">— wähle deinen Namen —</option></select>
+    <button class="join" id="joinBtn">Beitreten</button>
+  </div>
+
+  <div class="view" id="gameView" style="display:none;">
+    <h1 id="greeting"></h1>
+    <button class="buzz-btn" id="buzzBtn">BUZZ</button>
+    <div class="status" id="status">Warte auf Frage…</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let myName = localStorage.getItem('cd_name') || '';
+let state = { teamA:{score:0}, teamB:{score:0}, players:{}, answers:[], phase:'idle', person1:null, person2:null, faceoffTurn:'first', controllingTeam:null, activePlayer:null, buzzQueue:[] };
+
+const joinView = document.getElementById('joinView');
+const gameView = document.getElementById('gameView');
+const buzzBtn = document.getElementById('buzzBtn');
+const statusEl = document.getElementById('status');
+const nameInput = document.getElementById('nameInput');
+
+function showGame(){
+  joinView.style.display='none';
+  gameView.style.display='block';
+  document.getElementById('greeting').textContent = 'Hi, ' + myName;
+}
+
+function populateNameSelect(){
+  const names = Object.keys(typeof AVATARE!=='undefined' ? AVATARE : {});
+  nameInput.innerHTML = '<option value="">— wähle deinen Namen —</option>' +
+    names.map(n=>`<option value="${n}" ${n===myName?'selected':''}>${n}</option>`).join('');
+}
+populateNameSelect();
+if(myName) nameInput.value = myName;
+
+async function registerPlayer(name){
+  const { data } = await sb.from('cd_state').select('state').eq('id',1).single();
+  const s = data?.state || {};
+  s.players = s.players || {};
+  if(!s.players[name]) s.players[name] = { team: null };
+  await sb.from('cd_state').update({ state: s }).eq('id',1);
+}
+
+if(myName){
+  showGame();
+  registerPlayer(myName);
+}
+
+document.getElementById('joinBtn').onclick = async ()=>{
+  const val = nameInput.value.trim();
+  if(!val) return;
+  myName = val;
+  localStorage.setItem('cd_name', myName);
+  await registerPlayer(myName);
+  showGame();
+};
+nameInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('joinBtn').click();
+});
+
+async function loadState(){
+  const { data } = await sb.from('cd_state').select('state').eq('id',1).single();
+  state = data?.state || state;
+  render();
+}
+loadState();
+setInterval(loadState, 2000);
+
+sb.channel('cd_state_channel_buzz')
+  .on('postgres_changes', { event:'*', schema:'public', table:'cd_state' }, payload=>{
+    state = payload.new.state || state;
+    render();
+  }).subscribe();
+
+function canIBuzz(){
+  const myTeam = state.players[myName]?.team;
+  if(!myTeam) return false;
+  if(state.phase==='buzz') return !(state.buzzQueue||[]).includes(myName);
+  if(state.phase==='faceoff' && !state.person2){
+    const person1Team = state.players[state.person1]?.team;
+    return myTeam !== person1Team && !(state.buzzQueue||[]).includes(myName);
+  }
+  return false;
+}
+
+function render(){
+  const myTeam = state.players[myName]?.team;
+  buzzBtn.disabled = !canIBuzz();
+
+  if(!myTeam){
+    statusEl.innerHTML = 'Warte, bis der Host dich einem Team zuteilt…';
+  } else if(state.phase==='idle'){
+    statusEl.innerHTML = `Du bist in <span class="team${myTeam}">Team ${myTeam}</span>. Warte auf die nächste Frage…`;
+  } else if(state.phase==='buzz'){
+    statusEl.innerHTML = canIBuzz() ? 'Buzzer ist offen!' : 'Gebuzzert — warte auf den Host.';
+  } else if(state.phase==='faceoff'){
+    if(myName===state.activePlayer){
+      statusEl.innerHTML = '<b>Du bist dran! Sag deine Antwort laut.</b>';
+    } else if(canIBuzz()){
+      statusEl.innerHTML = 'Buzzer ist offen — dein Team ist noch nicht im Face-Off!';
+    } else {
+      statusEl.innerHTML = 'Face-Off läuft…';
+    }
+  } else if(state.phase==='playing'){
+    statusEl.innerHTML = state.controllingTeam===myTeam
+      ? 'Euer Team ist am Zug — sag deine Antwort laut!'
+      : 'Das andere Team ist am Zug.';
+  } else if(state.phase==='manual'){
+    statusEl.innerHTML = 'Der Host löst die Runde gerade auf…';
+  } else if(state.phase==='resolved'){
+    statusEl.innerHTML = 'Runde vorbei — nächste Frage kommt gleich.';
+  }
+}
+
+async function doBuzz(){
+  if(!canIBuzz()) return;
+  const { data } = await sb.from('cd_state').select('state').eq('id',1).single();
+  const s = data?.state || {};
+  const myTeam = s.players?.[myName]?.team;
+  if(!myTeam) return;
+  s.buzzQueue = s.buzzQueue || [];
+
+  if(s.phase==='buzz' && s.buzzQueue.length===0){
+    s.buzzQueue = [myName];
+    s.person1 = myName;
+    s.person2 = null;
+    s.faceoffTurn = 'first';
+    s.activePlayer = myName;
+    s.buzzFlashName = myName;
+    s.buzzFlashAt = Date.now();
+    s.phase = 'faceoff';
+    await sb.from('cd_state').update({ state: s }).eq('id',1);
+  } else if(s.phase==='faceoff' && !s.person2){
+    const person1Team = s.players[s.person1]?.team;
+    if(myTeam !== person1Team && !s.buzzQueue.includes(myName)){
+      s.buzzQueue.push(myName);
+      s.person2 = myName;
+      await sb.from('cd_state').update({ state: s }).eq('id',1);
+    }
+  }
+}
+
+buzzBtn.addEventListener('click', doBuzz);
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space' && gameView.style.display!=='none'){
+    e.preventDefault();
+    doBuzz();
+  }
+});
+</script>
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../buzzer-fx.js"></script>
+</body>
+</html>

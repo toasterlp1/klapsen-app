@@ -1,0 +1,23 @@
+
+const CATEGORIES = [
+  { category: "Geruch", left: "Stinkt", right: "Riecht gut" },
+  { category: "Bekanntheit", left: "Unbekannt", right: "Berühmt" },
+  { category: "Preis", left: "Billig", right: "Teuer" },
+  { category: "Geschwindigkeit", left: "Langsam", right: "Schnell" },
+  { category: "Temperatur", left: "Kalt", right: "Heiss" },
+  { category: "Grösse", left: "Winzig", right: "Riesig" },
+  { category: "Gefahr", left: "Harmlos", right: "Tödlich" },
+  { category: "Alter", left: "Jung", right: "Alt" },
+  { category: "Lautstärke", left: "Leise", right: "Laut" },
+  { category: "Geschmack", left: "Eklig", right: "Lecker" },
+  { category: "Beliebtheit", left: "Unbeliebt", right: "Beliebt" },
+  { category: "Schwierigkeit", left: "Einfach", right: "Schwer" },
+  { category: "Helligkeit", left: "Dunkel", right: "Hell" },
+  { category: "Gewicht", left: "Leicht", right: "Schwer" },
+  { category: "Süsse", left: "Sauer", right: "Süss" },
+  { category: "Härte", left: "Weich", right: "Hart" },
+  { category: "Peinlichkeit", left: "Normal", right: "Peinlich" },
+  { category: "Chaos", left: "Ordentlich", right: "Chaotisch" },
+  { category: "Mut", left: "Feige", right: "Mutig" },
+  { category: "Reichtum", left: "Arm", right: "Reich" },
+];

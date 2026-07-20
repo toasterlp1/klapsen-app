@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Klapsen App — Gartic Phone</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<script src="../symbole.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#12172a; --panel2:#0d1220; --border:#232b45;
+    --ink:#eef1f8; --muted:#6b7488;
+    --accent:#00e5c7; --good:#22c55e; --bad:#ff3860; --gold:#ffd166;
+    --gp:#f472b6;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(ellipse at 50% 0%, #2a1030 0%, var(--bg) 62%);
+    color:var(--ink);font-family:'Inter',sans-serif;
+    display:flex;flex-direction:column;padding:16px;gap:12px;
+  }
+  h1{font-family:'Anton',sans-serif;letter-spacing:2px;font-size:26px;text-align:center;}
+  h1 span{color:var(--gp);}
+
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:900;font-size:14px;letter-spacing:.5px;
+    border:1px solid var(--border);border-radius:11px;padding:13px 18px;cursor:pointer;min-height:44px;
+    background:#1b2136;color:var(--ink);transition:filter .15s, transform .1s;
+  }
+  .btn:hover:not(:disabled){filter:brightness(1.35);}
+  .btn:active:not(:disabled){transform:scale(.97);}
+  .btn:disabled{opacity:.35;cursor:default;}
+  .btn.go{background:var(--gp);color:#2b0d1c;border-color:transparent;}
+  .btn.danger{background:transparent;border-color:var(--bad);color:var(--bad);}
+  .btn.tiny{padding:7px 12px;min-height:0;font-size:11px;font-weight:700;flex:0 0 auto;}
+
+  select,input[type=number],input[type=text]{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--ink);
+    padding:13px;border-radius:11px;font-size:16px;font-family:'Inter',sans-serif;
+  }
+  select{text-align:center;}
+
+  #joinView,#lobbyView{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+  .card{
+    width:min(460px,94vw);background:var(--panel);border:1px solid var(--border);
+    border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px;
+  }
+  .lp{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;
+  }
+  .lp img{width:30px;height:30px;border-radius:50%;}
+  .lp .host{margin-left:auto;font-size:10px;font-weight:900;color:var(--gold);letter-spacing:1px;}
+  .lp .ok{margin-left:auto;color:var(--good);font-weight:900;font-size:11px;}
+  .setting{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .setting label{font-size:13px;color:var(--muted);font-weight:700;}
+  .setting input{width:88px;text-align:center;}
+  .hint{font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
+
+  #gameView{flex:1;display:none;flex-direction:column;gap:10px;min-height:0;}
+  .topbar{
+    display:flex;align-items:center;gap:12px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;
+  }
+  .topbar .st{font-family:'Anton',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--muted);}
+  .topbar .mid{flex:1;text-align:center;font-weight:700;font-size:14px;}
+  .timer{font-family:'Anton',sans-serif;font-size:22px;color:var(--gold);min-width:44px;text-align:right;}
+  .timer.low{color:var(--bad);animation:blink .7s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+  .timebar{height:5px;border-radius:3px;background:#141a2c;overflow:hidden;margin-top:-4px;}
+  .timebar .fill{height:100%;background:linear-gradient(90deg,#ff5470,#c41230);}
+
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;}
+
+  .prompt{
+    width:min(700px,94vw);text-align:center;
+  }
+  .prompt .lbl{font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:900;}
+  .prompt .satz{
+    font-size:22px;font-weight:700;line-height:1.4;padding:18px;
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  }
+  .prompt img{
+    max-width:min(640px,90vw);width:100%;border-radius:14px;background:#fff;
+    box-shadow:0 8px 30px rgba(0,0,0,.5);
+  }
+  .sendbox{width:min(700px,94vw);display:flex;gap:8px;}
+  .sendbox input{flex:1;}
+
+  #board{
+    background:#fff;border-radius:12px;width:min(760px,94vw);height:auto;aspect-ratio:4/3;
+    touch-action:none;cursor:crosshair;box-shadow:0 8px 30px rgba(0,0,0,.5);max-height:56vh;
+  }
+  .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;}
+  .swatch{width:26px;height:26px;border-radius:7px;border:2px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .12s;}
+  .swatch:hover{transform:scale(1.12);}
+  .swatch.on{border-color:#fff;transform:scale(1.15);box-shadow:0 0 10px rgba(255,255,255,.5);}
+  .mixer{position:relative;width:26px;height:26px;border-radius:7px;cursor:pointer;overflow:hidden;border:2px dashed rgba(255,255,255,.4);display:inline-flex;align-items:center;justify-content:center;background:conic-gradient(from 0deg,#e11d48,#f59e0b,#22c55e,#3b82f6,#8b5cf6,#e11d48);}
+  .mixer input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;}
+  .mixer .mixer-ic{font-weight:900;font-size:16px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none;}
+  .size{width:28px;height:26px;border-radius:7px;background:var(--panel2);border:1px solid var(--border);
+        cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .size.on{border-color:var(--accent);}
+  .size i{display:block;border-radius:50%;background:var(--ink);}
+
+  .waiting{
+    text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;
+  }
+  .waiting .big{font-family:'Anton',sans-serif;font-size:24px;letter-spacing:2px;color:var(--good);}
+  .waitlist{display:flex;flex-direction:column;gap:6px;width:min(320px,90vw);}
+
+  #endView{flex:1;display:none;flex-direction:column;gap:12px;min-height:0;}
+  .pres{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    overflow-y:auto;padding:10px;
+  }
+  .chainhead{
+    font-family:'Anton',sans-serif;font-size:16px;letter-spacing:2px;color:var(--gp);text-align:center;
+  }
+  .step{
+    width:min(680px,94vw);background:var(--panel);border:1px solid var(--border);
+    border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;
+    animation:stepIn .4s var(--ease);
+  }
+  @keyframes stepIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  .step .who{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:700;}
+  .step .who img{width:24px;height:24px;border-radius:50%;}
+  .step .txt{font-size:19px;font-weight:700;line-height:1.4;}
+  .step img.pic{width:100%;border-radius:10px;background:#fff;}
+  .presnav{display:flex;gap:10px;justify-content:center;align-items:center;}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+
+<div id="joinView">
+  <h1>GARTIC <span>PHONE</span></h1>
+  <div class="card">
+    <select id="nameSel"></select>
+    <button class="btn go" id="joinBtn">BEITRETEN</button>
+  </div>
+</div>
+
+<div id="lobbyView" style="display:none;">
+  <h1>GARTIC <span>PHONE</span></h1>
+  <div class="card">
+    <div style="font-family:Anton;font-size:12px;letter-spacing:2px;color:var(--muted);">LOBBY</div>
+    <div id="lobbyPlayers" style="display:flex;flex-direction:column;gap:7px;"></div>
+
+    <div id="hostSettings" style="display:none;flex-direction:column;gap:10px;">
+      <div class="setting">
+        <label>Stationen pro Kette</label>
+        <input type="number" id="setSteps" min="2" max="12" value="6">
+      </div>
+      <div class="setting">
+        <label>Sekunden zum Schreiben</label>
+        <input type="number" id="setWrite" min="20" max="180" step="10" value="60">
+      </div>
+      <div class="setting">
+        <label>Sekunden zum Zeichnen</label>
+        <input type="number" id="setDraw" min="30" max="300" step="10" value="120">
+      </div>
+      <div class="hint" id="stepHint"></div>
+      <button class="btn go" id="startBtn">SPIEL STARTEN</button>
+    </div>
+
+    <div class="hint" id="lobbyHint">Warte auf den Start…</div>
+    <button class="btn danger tiny" id="leaveBtn">Lobby verlassen</button>
+  </div>
+</div>
+
+<div id="gameView">
+  <div class="topbar">
+    <span class="st" id="stationLbl">STATION –</span>
+    <span class="mid" id="taskLbl"></span>
+    <span class="timer" id="timer">–</span>
+    <button class="btn danger tiny" id="closeBtn" style="display:none;">Beenden</button>
+    <button class="btn tiny" id="leaveGameBtn">Verlassen</button>
+  </div>
+  <div class="timebar"><div class="fill" id="timeFill"></div></div>
+
+  <div class="stage" id="stage"></div>
+</div>
+
+<div id="endView">
+  <div class="topbar">
+    <span class="st">ERGEBNIS</span>
+    <span class="mid" id="presLbl"></span>
+    <button class="btn danger tiny" id="backToLobbyBtn">Zurück zur Lobby</button>
+  </div>
+  <div class="pres" id="pres"></div>
+  <div class="presnav">
+    <button class="btn" id="prevChain">◀ Vorherige</button>
+    <button class="btn go" id="nextStep">Nächster Schritt ▶</button>
+    <button class="btn" id="nextChain">Nächste Kette ▶</button>
+    <button class="btn" id="downloadChain" style="background:#22c55e;color:#04120c;border-color:transparent;">Kette speichern</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let myName = localStorage.getItem('gp_name') || '';
+let state = null;
+let beitraege = [];
+let abgegeben = false;
+let letzteStation = null;
+let letzterKey = null;
+
+const $ = id => document.getElementById(id);
+
+function leererState(){
+  return {
+    phase: 'lobby',
+    players: {},
+    reihenfolge: [],
+    hostName: null,
+    stationen: 6,
+    sekWrite: 60,
+    sekDraw: 120,
+    station: 0,
+    startAt: null,
+    spiel: 0,
+    fertig: []
+  };
+}
+
+async function ladeState(){
+  const { data } = await sb.from('gp_state').select('state').eq('id',1).single();
+  const s = data?.state;
+  return (s && s.phase) ? s : leererState();
+}
+async function speichere(s){
+  await sb.from('gp_state').update({ state:s, updated_at:new Date().toISOString() }).eq('id',1);
+  state = s;
+}
+
+function meineKette(s){
+  const n = s.reihenfolge.length;
+  if(!n) return 0;
+  const i = s.reihenfolge.indexOf(myName);
+  if(i < 0) return -1;
+  return ((i - s.station) % n + n) % n;
+}
+
+function istSatzStation(st){ return st % 2 === 0; }
+
+function fuelleNamen(){
+  const sel = $('nameSel');
+  const namen = Object.keys(typeof AVATARE !== 'undefined' ? AVATARE : {});
+  sel.innerHTML = '<option value="">— wähle deinen Namen —</option>' +
+    namen.map(n => `<option value="${n}" ${n===myName?'selected':''}>${n}</option>`).join('');
+}
+fuelleNamen();
+
+$('joinBtn').onclick = async () => {
+  const val = $('nameSel').value.trim();
+  if(!val) return;
+  myName = val;
+  localStorage.setItem('gp_name', myName);
+  const s = await ladeState();
+  s.players = s.players || {};
+  if(!s.players[myName]) s.players[myName] = {};
+  if(!s.hostName) s.hostName = myName;
+  await speichere(s);
+  render();
+};
+
+async function verlassen(){
+  const s = await ladeState();
+  delete s.players[myName];
+  if(s.hostName === myName){
+    const rest = Object.keys(s.players);
+    s.hostName = rest.length ? rest[0] : null;
+  }
+
+  if(s.phase !== 'lobby' && s.phase !== 'ergebnis'){
+    s.phase = 'lobby';
+    s.station = 0; s.startAt = null; s.fertig = [];
+  }
+  await speichere(s);
+  myName = '';
+  localStorage.removeItem('gp_name');
+  state = s;
+  render();
+}
+$('leaveBtn').onclick = verlassen;
+$('leaveGameBtn').onclick = async () => {
+  if(!confirm('Spiel verlassen? Damit bricht die laufende Runde für alle ab.')) return;
+  await verlassen();
+};
+$('closeBtn').onclick = async () => {
+  if(!confirm('Spiel für ALLE beenden?')) return;
+  const s = await ladeState();
+  if(s.hostName !== myName) return;
+  s.phase = 'lobby'; s.station = 0; s.startAt = null; s.fertig = [];
+  await speichere(s);
+};
+$('backToLobbyBtn').onclick = async () => {
+  const s = await ladeState();
+  s.phase = 'lobby'; s.station = 0; s.startAt = null; s.fertig = [];
+  await speichere(s);
+};
+
+$('startBtn').onclick = async () => {
+  const s = await ladeState();
+  if(s.hostName !== myName) return;
+  const namen = Object.keys(s.players);
+  if(namen.length < 3){ alert('Mindestens 3 Spieler nötig.'); return; }
+
+  const maxSt = namen.length;
+  s.stationen = Math.max(2, Math.min(maxSt, parseInt($('setSteps').value) || 6));
+  s.sekWrite  = Math.max(20, Math.min(180, parseInt($('setWrite').value) || 60));
+  s.sekDraw   = Math.max(30, Math.min(300, parseInt($('setDraw').value) || 120));
+
+  s.reihenfolge = namen;
+  s.spiel = (s.spiel || 0) + 1;
+  s.station = 0;
+  s.phase = 'schreiben';
+  s.startAt = Date.now();
+  s.fertig = [];
+  await speichere(s);
+  abgegeben = false;
+};
+
+async function abgeben(inhalt, art){
+  if(abgegeben) return;
+  abgegeben = true;
+
+  const s = await ladeState();
+  const kette = meineKette(s);
+  if(kette < 0) return;
+
+  await sb.from('gp_beitraege').insert({
+    spiel: s.spiel, kette, station: s.station,
+    autor: myName, art, inhalt
+  });
+
+  s.fertig = s.fertig || [];
+  if(!s.fertig.includes(myName)) s.fertig.push(myName);
+  await speichere(s);
+  render();
+}
+
+setInterval(async () => {
+  if(!state || !myName) return;
+  if(state.hostName !== myName) return;
+  if(state.phase !== 'schreiben' && state.phase !== 'zeichnen') return;
+
+  const spieler = Object.keys(state.players);
+  const alleFertig = spieler.length > 0 && spieler.every(n => (state.fertig||[]).includes(n));
+  const sek = state.phase === 'schreiben' ? state.sekWrite : state.sekDraw;
+  const zeitUm = state.startAt && (Date.now() - state.startAt) / 1000 >= sek;
+
+  if(!alleFertig && !zeitUm) return;
+
+  const s = await ladeState();
+  if(s.phase !== 'schreiben' && s.phase !== 'zeichnen') return;
+
+  const fehlend = Object.keys(s.players).filter(n => !(s.fertig||[]).includes(n));
+  for(const n of fehlend){
+    const i = s.reihenfolge.indexOf(n);
+    if(i < 0) continue;
+    const k = ((i - s.station) % s.reihenfolge.length + s.reihenfolge.length) % s.reihenfolge.length;
+    await sb.from('gp_beitraege').insert({
+      spiel: s.spiel, kette: k, station: s.station, autor: n,
+      art: istSatzStation(s.station) ? 'satz' : 'bild',
+      inhalt: istSatzStation(s.station) ? '(nichts abgegeben)' : LEERES_BILD
+    });
+  }
+
+  s.station += 1;
+  if(s.station >= s.stationen){
+    s.phase = 'ergebnis';
+    s.startAt = null;
+  } else {
+    s.phase = istSatzStation(s.station) ? 'schreiben' : 'zeichnen';
+    s.startAt = Date.now();
+    s.fertig = [];
+  }
+  await speichere(s);
+}, 900);
+
+const LEERES_BILD = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+let canvas = null, ctx = null;
+let malt = false, farbe = '#111111', dicke = 5, radierer = false, fuellen = false;
+let undoStack = [];
+let letzterPunkt = null;
+
+function baueCanvas(){
+  const c = document.createElement('canvas');
+  c.id = 'board'; c.width = 800; c.height = 600;
+  return c;
+}
+
+function pos(e){
+  const r = canvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return { x:(p.clientX-r.left)/r.width*canvas.width, y:(p.clientY-r.top)/r.height*canvas.height };
+}
+
+function hexZuRgb(hex){
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function fuelleFlaeche(sx, sy, hexFarbe){
+  sx = Math.round(sx); sy = Math.round(sy);
+  if(sx<0||sy<0||sx>=canvas.width||sy>=canvas.height) return;
+  const bild = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const px = bild.data, W = canvas.width, H = canvas.height;
+  const start = (sy*W+sx)*4;
+  const zR=px[start], zG=px[start+1], zB=px[start+2];
+  const [nR,nG,nB] = hexZuRgb(hexFarbe);
+  if(zR===nR && zG===nG && zB===nB) return;
+  const TOL = 32;
+  const passt = i => Math.abs(px[i]-zR)<=TOL && Math.abs(px[i+1]-zG)<=TOL && Math.abs(px[i+2]-zB)<=TOL;
+  const stack = [[sx,sy]], gesehen = new Uint8Array(W*H);
+  while(stack.length){
+    const [x,y] = stack.pop();
+    if(x<0||y<0||x>=W||y>=H) continue;
+    const flach = y*W+x;
+    if(gesehen[flach]) continue;
+    const i = flach*4;
+    if(!passt(i)) continue;
+    gesehen[flach]=1;
+    px[i]=nR; px[i+1]=nG; px[i+2]=nB; px[i+3]=255;
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  ctx.putImageData(bild,0,0);
+}
+
+function malStart(e){
+  e.preventDefault();
+  const p = pos(e);
+  if(fuellen){ sichereSnapshot(); fuelleFlaeche(p.x, p.y, farbe); return; }
+  sichereSnapshot();
+  malt = true; letzterPunkt = p;
+}
+function malBewegen(e){
+  if(!malt) return;
+  e.preventDefault();
+  const p = pos(e);
+  ctx.strokeStyle = radierer ? '#fff' : farbe;
+  ctx.lineWidth = radierer ? dicke*3 : dicke;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(letzterPunkt.x, letzterPunkt.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+  letzterPunkt = p;
+}
+function malEnde(){ malt = false; }
+
+function sichereSnapshot(){
+  if(!ctx) return;
+  try {
+    undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    if(undoStack.length > 25) undoStack.shift();
+  } catch(e) {}
+}
+
+function macheUndo(){
+  if(!ctx || !undoStack.length) return;
+  const bild = undoStack.pop();
+  ctx.putImageData(bild, 0, 0);
+}
+
+function bindeCanvas(){
+  ctx = canvas.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  canvas.addEventListener('mousedown', malStart);
+  canvas.addEventListener('mousemove', malBewegen);
+  window.addEventListener('mouseup', malEnde);
+  canvas.addEventListener('touchstart', malStart, {passive:false});
+  canvas.addEventListener('touchmove', malBewegen, {passive:false});
+  window.addEventListener('touchend', malEnde);
+}
+
+async function ladeBeitraege(){
+  if(!state || !state.spiel) { beitraege = []; return; }
+  const { data } = await sb.from('gp_beitraege')
+    .select('kette, station, autor, art, inhalt')
+    .eq('spiel', state.spiel)
+    .order('station', { ascending:true });
+  beitraege = data || [];
+}
+
+function meineVorlage(){
+  const k = meineKette(state);
+  const vor = state.station - 1;
+  if(vor < 0) return null;
+  return beitraege.find(b => b.kette === k && b.station === vor) || null;
+}
+
+function render(){
+  if(!state) return;
+  const drin = !!myName && state.players && state.players[myName];
+
+  $('joinView').style.display  = drin ? 'none' : 'flex';
+  $('lobbyView').style.display = (drin && state.phase === 'lobby') ? 'flex' : 'none';
+  $('gameView').style.display  = (drin && (state.phase === 'schreiben' || state.phase === 'zeichnen')) ? 'flex' : 'none';
+  $('endView').style.display   = (drin && state.phase === 'ergebnis') ? 'flex' : 'none';
+  if(!drin) return;
+
+  if(state.phase === 'lobby'){
+    const istHost = state.hostName === myName;
+    const n = Object.keys(state.players).length;
+    $('hostSettings').style.display = istHost ? 'flex' : 'none';
+    $('lobbyHint').textContent = istHost ? 'Du bist der Lobby-Leader.'
+                                         : 'Warte auf den Start durch ' + (state.hostName || '…');
+    $('stepHint').textContent = `Bei ${n} Spielern sind maximal ${n} Stationen möglich. ` +
+                                `Gerade Stationen = schreiben, ungerade = zeichnen.`;
+    $('lobbyPlayers').innerHTML = Object.keys(state.players).map(nm => {
+      const av = avatarFor(nm);
+      return `<div class="lp">${av?`<img src="${av}">`:''}<span>${nm}</span>
+        ${state.hostName===nm?'<span class="host">LEADER</span>':''}</div>`;
+    }).join('');
+    return;
+  }
+
+  if(state.phase === 'ergebnis'){
+    $('closeBtn').style.display = 'none';
+    zeigePraesentation();
+    return;
+  }
+
+  const satzPhase = (state.phase === 'schreiben');
+  $('stationLbl').textContent = `STATION ${state.station + 1}/${state.stationen}`;
+  $('closeBtn').style.display = (state.hostName === myName) ? 'block' : 'none';
+
+  if(letzteStation !== state.station){
+    letzteStation = state.station;
+    abgegeben = (state.fertig || []).includes(myName);
+    letzterKey = null;
+  }
+
+  const stage = $('stage');
+
+  if(abgegeben){
+    letzterKey = 'warten-' + state.station;
+    $('taskLbl').textContent = 'Abgegeben — warte auf die anderen';
+    const offen = Object.keys(state.players).filter(n => !(state.fertig||[]).includes(n));
+    stage.innerHTML = `<div class="waiting">
+      <div class="big">FERTIG!</div>
+      <div style="color:var(--muted);font-size:13px;">
+        ${offen.length ? 'Es fehlen noch: ' + offen.join(', ') : 'Gleich geht es weiter…'}
+      </div>
+    </div>`;
+    return;
+  }
+
+  const vorlage = meineVorlage();
+
+  if(satzPhase){
+    $('taskLbl').textContent = (state.station === 0)
+      ? 'Schreib einen Satz — irgendwas Absurdes'
+      : 'Was siehst du auf dem Bild?';
+
+    const satzKey = 'satz-' + state.spiel + '-' + state.station;
+    if(letzterKey === satzKey) return;
+    letzterKey = satzKey;
+
+    const oben = (state.station === 0)
+      ? `<div class="prompt"><div class="lbl">Dein Satz startet eine Kette</div></div>`
+      : `<div class="prompt">
+           <div class="lbl">Beschreibe dieses Bild</div>
+           <img src="${vorlage ? vorlage.inhalt : ''}" alt="">
+         </div>`;
+
+    stage.innerHTML = oben + `
+      <div class="sendbox">
+        <input type="text" id="satzInput" maxlength="120" placeholder="Dein Satz…" autocomplete="off">
+        <button class="btn go" id="satzBtn">Abgeben</button>
+      </div>`;
+
+    const inp = $('satzInput');
+    const send = () => {
+      const t = inp.value.trim();
+      if(!t) return;
+      abgeben(t, 'satz');
+    };
+    $('satzBtn').onclick = send;
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter') send(); });
+    setTimeout(() => inp.focus(), 80);
+    return;
+  }
+
+  $('taskLbl').textContent = 'Zeichne diesen Satz';
+
+  const zeichenKey = 'zeichnen-' + state.spiel + '-' + state.station;
+  if(letzterKey === zeichenKey) return;
+  letzterKey = zeichenKey;
+
+  stage.innerHTML = `
+    <div class="prompt">
+      <div class="lbl">Dein Auftrag</div>
+      <div class="satz">${vorlage ? escape2(vorlage.inhalt) : '…'}</div>
+    </div>`;
+
+  canvas = baueCanvas();
+  stage.appendChild(canvas);
+  bindeCanvas();
+
+  const tools = document.createElement('div');
+  tools.className = 'tools';
+  tools.innerHTML = `
+    ${['#111111','#6b7280','#ffffff','#e11d48','#f97316','#f59e0b','#eab308','#22c55e','#10b981','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#d946ef','#ec4899','#92400e']
+      .map((c,i) => `<span class="swatch ${i===0?'on':''}" data-c="${c}" style="background:${c}"></span>`).join('')}
+    <label class="mixer" title="Eigene Farbe mischen"><input type="color" id="colorPicker" value="#111111"><span class="mixer-ic">+</span></label>
+    <span class="size on" data-s="5"><i style="width:5px;height:5px;"></i></span>
+    <span class="size" data-s="12"><i style="width:11px;height:11px;"></i></span>
+    <span class="size" data-s="26"><i style="width:17px;height:17px;"></i></span>
+    <button class="btn tiny" id="undoBtn">Rückgängig</button>
+    <button class="btn tiny" id="fillBtn">Füllen</button>
+    <button class="btn tiny" id="eraserBtn">Radierer</button>
+    <button class="btn danger tiny" id="clearBtn">Löschen</button>
+    <button class="btn go" id="bildBtn" style="padding:9px 20px;min-height:0;">Abgeben</button>`;
+  stage.appendChild(tools);
+
+  const anzeige = () => {
+    $('eraserBtn').style.background = radierer ? 'var(--accent)' : '';
+    $('eraserBtn').style.color = radierer ? '#04120f' : '';
+    $('fillBtn').style.background = fuellen ? 'var(--accent)' : '';
+    $('fillBtn').style.color = fuellen ? '#04120f' : '';
+    canvas.style.cursor = fuellen ? 'copy' : 'crosshair';
+  };
+  tools.querySelectorAll('.swatch').forEach(sw => sw.onclick = () => {
+    farbe = sw.dataset.c; radierer = false;
+    tools.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
+    sw.classList.add('on'); anzeige();
+  });
+  const picker = $('colorPicker');
+  if(picker) picker.oninput = () => {
+    farbe = picker.value; radierer = false;
+    tools.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
+    anzeige();
+  };
+  tools.querySelectorAll('.size').forEach(sz => sz.onclick = () => {
+    dicke = parseInt(sz.dataset.s);
+    tools.querySelectorAll('.size').forEach(x => x.classList.remove('on'));
+    sz.classList.add('on');
+  });
+  $('undoBtn').onclick    = () => macheUndo();
+  $('eraserBtn').onclick = () => { radierer = !radierer; if(radierer) fuellen = false; anzeige(); };
+  $('fillBtn').onclick   = () => { fuellen = !fuellen; if(fuellen) radierer = false; anzeige(); };
+  $('clearBtn').onclick  = () => { sichereSnapshot(); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); };
+  $('bildBtn').onclick   = () => {
+
+    abgeben(canvas.toDataURL('image/jpeg', 0.7), 'bild');
+  };
+}
+
+function escape2(t){
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let presKette = 0, presSchritt = 0;
+
+async function zeigePraesentation(){
+  if(!beitraege.length) await ladeBeitraege();
+  const ketten = state.reihenfolge.length;
+  presKette = Math.max(0, Math.min(ketten - 1, presKette));
+
+  const starter = state.reihenfolge[presKette] || '?';
+  $('presLbl').textContent = `Kette ${presKette + 1} von ${ketten} — gestartet von ${starter}`;
+
+  const schritte = beitraege
+    .filter(b => b.kette === presKette)
+    .sort((a,b) => a.station - b.station)
+    .slice(0, presSchritt + 1);
+
+  $('pres').innerHTML = schritte.map(b => {
+    const av = avatarFor(b.autor);
+    const inhalt = (b.art === 'bild')
+      ? `<img class="pic" src="${b.inhalt}" alt="">`
+      : `<div class="txt">${escape2(b.inhalt)}</div>`;
+    return `<div class="step">
+      <div class="who">${av?`<img src="${av}">`:''}${b.autor}</div>
+      ${inhalt}
+    </div>`;
+  }).join('');
+
+  const max = beitraege.filter(b => b.kette === presKette).length;
+  $('nextStep').disabled = (presSchritt >= max - 1);
+  $('pres').scrollTop = $('pres').scrollHeight;
+}
+
+$('nextStep').onclick  = () => { presSchritt++; zeigePraesentation(); };
+$('nextChain').onclick = () => { presKette++; presSchritt = 0; zeigePraesentation(); };
+$('prevChain').onclick = () => { presKette = Math.max(0, presKette - 1); presSchritt = 0; zeigePraesentation(); };
+$('downloadChain').onclick = () => ladeKetteHerunter();
+
+async function ladeKetteHerunter(){
+  if(!beitraege.length) await ladeBeitraege();
+  const schritte = beitraege
+    .filter(b => b.kette === presKette)
+    .sort((a,b) => a.station - b.station);
+  if(!schritte.length) return;
+
+  const starter = state.reihenfolge[presKette] || '?';
+  const B = 900, PAD = 30, GAP = 24, KOPF = 84, BILD_H = 500, TXT_H = 120;
+
+  let hoehe = 70;
+  schritte.forEach(b => { hoehe += KOPF + (b.art === 'bild' ? BILD_H : TXT_H) + GAP; });
+
+  const c = document.createElement('canvas');
+  c.width = B; c.height = hoehe;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0f1120'; x.fillRect(0,0,B,hoehe);
+  x.fillStyle = '#ec4899';
+  x.font = '700 30px Inter, sans-serif';
+  x.fillText('Gartic Phone — Kette von ' + starter, PAD, 46);
+
+  const bilder = await Promise.all(schritte.map(b => b.art === 'bild' ? ladeBild(b.inhalt) : Promise.resolve(null)));
+
+  let y = 70;
+  schritte.forEach((b, i) => {
+    x.fillStyle = '#1a1d33';
+    const inhaltH = b.art === 'bild' ? BILD_H : TXT_H;
+    roundRect(x, PAD, y, B - PAD*2, KOPF + inhaltH, 16);
+    x.fill();
+
+    x.fillStyle = '#8b96b3';
+    x.font = '700 20px Inter, sans-serif';
+    x.fillText((b.art === 'bild' ? 'Zeichnung' : 'Text') + ' — ' + b.autor, PAD + 24, y + 42);
+
+    if(b.art === 'bild' && bilder[i]){
+      const img = bilder[i];
+      const maxW = B - PAD*2 - 48, maxH = BILD_H - 24;
+      const scale = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      x.drawImage(img, PAD + 24 + (maxW - w)/2, y + KOPF, w, h);
+    } else if(b.art !== 'bild'){
+      x.fillStyle = '#eef1f8';
+      x.font = '400 26px Inter, sans-serif';
+      wrapText(x, b.inhalt, PAD + 24, y + KOPF + 20, B - PAD*2 - 48, 34);
+    }
+    y += KOPF + inhaltH + GAP;
+  });
+
+  const a = document.createElement('a');
+  a.download = 'gartic-kette-' + (presKette + 1) + '.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+function ladeBild(src){
+  return new Promise(res => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = src;
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, x, y, maxW, lh){
+  const woerter = String(text).split(' ');
+  let zeile = '';
+  woerter.forEach(w => {
+    const test = zeile + w + ' ';
+    if(ctx.measureText(test).width > maxW && zeile){
+      ctx.fillText(zeile, x, y);
+      zeile = w + ' '; y += lh;
+    } else zeile = test;
+  });
+  ctx.fillText(zeile, x, y);
+}
+
+function tickTimer(){
+  requestAnimationFrame(tickTimer);
+  if(!state || (state.phase !== 'schreiben' && state.phase !== 'zeichnen') || !state.startAt){
+    $('timer').textContent = '–';
+    $('timeFill').style.width = '0%';
+    return;
+  }
+  const sek = state.phase === 'schreiben' ? state.sekWrite : state.sekDraw;
+  const rest = sek - (Date.now() - state.startAt) / 1000;
+  const s = Math.max(0, Math.ceil(rest));
+  $('timer').textContent = s;
+  $('timer').classList.toggle('low', s <= 10);
+  $('timeFill').style.width = Math.max(0, Math.min(100, rest / sek * 100)) + '%';
+
+  if(rest <= 0 && !abgegeben){
+    if(state.phase === 'zeichnen' && canvas){
+      abgeben(canvas.toDataURL('image/jpeg', 0.7), 'bild');
+    } else if(state.phase === 'schreiben'){
+      const inp = $('satzInput');
+      const t = inp && inp.value.trim();
+      abgeben(t || '(nichts abgegeben)', 'satz');
+    }
+  }
+}
+tickTimer();
+
+let letztePhase = null, letzterSpielStand = null;
+
+async function tick(){
+  state = await ladeState();
+
+  const key = `${state.spiel}-${state.station}-${state.phase}`;
+  if(key !== letzterSpielStand){
+    letzterSpielStand = key;
+    await ladeBeitraege();
+    if(state.phase === 'ergebnis'){ presKette = 0; presSchritt = 0; }
+  }
+  render();
+}
+tick();
+setInterval(tick, 1500);
+
+sb.channel('gp_sync')
+  .on('postgres_changes', { event:'*', schema:'public', table:'gp_state' }, () => tick())
+  .subscribe();
+</script>
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+</body>
+</html>

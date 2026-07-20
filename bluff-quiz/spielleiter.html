@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Bluff-Quiz — Spielleiter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<style>
+  :root{
+    --bg:#0a0f1e; --panel:#111a30; --panel-border:#1e2a4a;
+    --ink:#eef1f8; --muted:#8b96b3; --accent:#a855f7; --good:#3ddc84;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;padding:26px 16px 80px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-family:'Anton',sans-serif;font-size:36px;text-transform:uppercase;letter-spacing:1px;margin:0 0 20px;}
+  h1 span{color:var(--accent);}
+  .box{background:var(--panel);border:1px solid var(--panel-border);border-radius:14px;padding:20px;margin-bottom:16px;}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:800;margin-bottom:8px;}
+  input, textarea{
+    width:100%;background:#0d1220;border:1px solid var(--panel-border);border-radius:10px;
+    color:var(--ink);padding:12px;font-family:'Inter',sans-serif;font-size:15px;margin-bottom:14px;outline:none;
+  }
+  input:focus, textarea:focus{border-color:var(--accent);}
+  button{
+    background:var(--accent);border:none;color:#fff;font-weight:800;
+    padding:13px 20px;border-radius:10px;cursor:pointer;font-size:13px;
+    text-transform:uppercase;letter-spacing:1px;font-family:'Inter',sans-serif;
+  }
+  button.sek{background:transparent;border:1px solid var(--panel-border);color:var(--muted);}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  .reihe{display:flex;gap:10px;flex-wrap:wrap;}
+  .status{font-size:14px;color:var(--muted);margin-bottom:10px;}
+  .phase{display:inline-block;background:var(--accent);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+  .eintrag{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--panel-border);font-size:14px;}
+  .eintrag:last-child{border:none;}
+  .echt{color:var(--good);font-weight:800;}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Bluff<span>-Quiz</span> Spielleiter</h1>
+
+  <div class="box">
+    <label>Frage (mit Lücke)</label>
+    <textarea id="frage" rows="2" placeholder="In der Schweiz ist es verboten, ___."></textarea>
+    <label>Echte Antwort</label>
+    <input id="echt" placeholder="am Sonntag die Wäsche aufzuhängen">
+    <div class="reihe">
+      <button id="btnNeu">Runde starten</button>
+      <button class="sek" id="btnZufall">Zufallsfrage</button>
+    </div>
+  </div>
+
+  <div class="box" id="steuerung" style="display:none;">
+    <div class="status">Phase: <span class="phase" id="phaseAnzeige">Lügen</span></div>
+    <div class="status" id="zaehler"></div>
+    <div id="liste"></div>
+    <div class="reihe" style="margin-top:16px;">
+      <button id="btnRaten">Zum Raten</button>
+      <button id="btnAufloesen">Auflösen</button>
+      <button class="sek" id="btnEnde">Beenden &amp; werten</button>
+    </div>
+  </div>
+</div>
+
+<script src="fragen.js"></script>
+<script src="../bestenliste.js"></script>
+<script>
+const sb = window.KA_SB;
+const $ = id => document.getElementById(id);
+
+let rundeId = null;
+let phase = 'luegen';
+
+$('btnZufall').addEventListener('click', () => {
+  if(typeof BLUFF_FRAGEN === 'undefined' || !BLUFF_FRAGEN.length) return;
+  const f = BLUFF_FRAGEN[Math.floor(Math.random() * BLUFF_FRAGEN.length)];
+  $('frage').value = f.frage;
+  $('echt').value = f.antwort;
+});
+
+$('btnNeu').addEventListener('click', async () => {
+  const frage = $('frage').value.trim();
+  const echt = $('echt').value.trim();
+  if(!frage || !echt) return;
+  const { data, error } = await sb.from('bluff_runden')
+    .insert({ frage:frage, echte_antwort:echt, phase:'luegen', aufgedeckt:false })
+    .select().single();
+  if(error){ alert(error.message); return; }
+  rundeId = data.id;
+  phase = 'luegen';
+  $('steuerung').style.display = 'block';
+  abonniere();
+  aktualisiere();
+});
+
+$('btnRaten').addEventListener('click', async () => {
+  await sb.from('bluff_runden').update({ phase:'raten' }).eq('id', rundeId);
+  phase = 'raten';
+  aktualisiere();
+});
+
+$('btnAufloesen').addEventListener('click', async () => {
+  await sb.from('bluff_runden').update({ phase:'aufloesung', aufgedeckt:true }).eq('id', rundeId);
+  phase = 'aufloesung';
+  aktualisiere();
+});
+
+$('btnEnde').addEventListener('click', async () => {
+  const r = await sb.from('bluff_runden').select('echte_antwort').eq('id', rundeId).single();
+  const lg = await sb.from('bluff_luegen').select('spieler,text').eq('runde_id', rundeId);
+  const st = await sb.from('bluff_stimmen').select('spieler,gewaehlt,ist_echt').eq('runde_id', rundeId);
+  const luegen = lg.data || [];
+  const stimmen = st.data || [];
+
+  const punkte = {};
+  const add = (s,p) => { punkte[s] = (punkte[s] || 0) + p; };
+  luegen.forEach(l => add(l.spieler, 0));
+
+  stimmen.forEach(s => {
+    if(s.ist_echt){
+      add(s.spieler, 2);
+    } else {
+      const opfer = luegen.find(l => l.text.toLowerCase() === s.gewaehlt.toLowerCase());
+      if(opfer && opfer.spieler !== s.spieler) add(opfer.spieler, 1);
+    }
+  });
+
+  const liste = Object.keys(punkte).map(spieler => ({ spieler:spieler, punkte:punkte[spieler] }));
+  if(typeof speichereErgebnisse === 'function') await speichereErgebnisse('bluff-quiz', liste);
+
+  await sb.from('bluff_runden').update({ phase:'ende' }).eq('id', rundeId);
+  phase = 'ende';
+  aktualisiere();
+
+  const text = liste.slice().sort((a,b) => b.punkte - a.punkte)
+    .map(e => e.spieler + ': ' + e.punkte).join('\n');
+  alert('Gewertet:\n' + text);
+});
+
+function abonniere(){
+  sb.channel('bluff-sl-' + rundeId)
+    .on('postgres_changes', { event:'*', schema:'public', table:'bluff_luegen', filter:'runde_id=eq.' + rundeId }, aktualisiere)
+    .on('postgres_changes', { event:'*', schema:'public', table:'bluff_stimmen', filter:'runde_id=eq.' + rundeId }, aktualisiere)
+    .subscribe();
+}
+
+async function aktualisiere(){
+  const NAMEN = { luegen:'Lügen', raten:'Raten', aufloesung:'Auflösung', ende:'Beendet' };
+  $('phaseAnzeige').textContent = NAMEN[phase] || phase;
+
+  const lg = await sb.from('bluff_luegen').select('spieler,text').eq('runde_id', rundeId);
+  const st = await sb.from('bluff_stimmen').select('spieler,gewaehlt,ist_echt').eq('runde_id', rundeId);
+  const luegen = lg.data || [];
+  const stimmen = st.data || [];
+
+  if(phase === 'luegen'){
+    $('zaehler').textContent = luegen.length + ' Lügen abgegeben';
+    $('liste').innerHTML = luegen.map(l =>
+      '<div class="eintrag"><span>' + l.spieler + '</span><span>' + l.text + '</span></div>'
+    ).join('');
+  } else {
+    $('zaehler').textContent = stimmen.length + ' Stimmen abgegeben';
+    $('liste').innerHTML = stimmen.map(s =>
+      '<div class="eintrag"><span>' + s.spieler + '</span><span class="' + (s.ist_echt ? 'echt' : '') + '">' +
+      s.gewaehlt + (s.ist_echt ? ' (echt)' : '') + '</span></div>'
+    ).join('');
+  }
+}
+
+if(!sb) alert('Nicht eingeloggt. Seite neu laden.');
+</script>
+
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../sound-toggle.js"></script>
+</body>
+</html>

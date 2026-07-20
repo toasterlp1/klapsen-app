@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Emoji-Rätsel — Buzzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --bg2:#100a20; --panel:#161029; --panel2:#1c1436; --border:#2c2350;
+    --ink:#eef1f8; --muted:#8579a8;
+    --accent:#c76bff; --accent2:#ff6bd6; --gold:#ffd166; --bad:#ff3860;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(ellipse 70vw 50vh at 20% -10%, rgba(199,107,255,.18), transparent 60%),
+      radial-gradient(ellipse 70vw 50vh at 85% 110%, rgba(255,107,214,.14), transparent 60%),
+      var(--bg);
+    color:var(--ink);font-family:'Inter',sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    min-height:100%;overflow-x:hidden;
+  }
+  .wrap{width:100%;max-width:420px;text-align:center;position:relative;z-index:1;}
+
+  h1.brand{
+    font-family:'Anton',sans-serif;font-size:32px;letter-spacing:5px;line-height:1;margin-bottom:6px;
+    background:linear-gradient(180deg,#f3e8ff 0%, var(--accent) 45%, var(--accent2) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 18px rgba(199,107,255,.4));
+  }
+  .brand-rule{
+    width:96px;height:4px;border-radius:3px;margin:0 auto 26px;
+    background:linear-gradient(90deg, var(--accent), var(--accent2), var(--gold));
+    box-shadow:0 0 14px rgba(199,107,255,.45);position:relative;overflow:hidden;
+  }
+  .brand-rule::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:sweep 2.8s var(--ease) infinite;}
+  @keyframes sweep{0%{left:-40%;}100%{left:120%;}}
+
+  #greeting{font-family:'Anton',sans-serif;letter-spacing:2px;font-size:20px;margin-bottom:22px;color:var(--ink);}
+
+  select{
+    width:100%;background:var(--panel);border:1px solid var(--border);color:var(--ink);
+    padding:15px;border-radius:12px;font-size:16px;margin-bottom:12px;text-align:center;font-weight:700;
+    transition:border-color .25s var(--ease);
+  }
+  select:focus{outline:none;border-color:var(--accent);}
+  button.join{
+    width:100%;padding:15px;border:none;border-radius:12px;
+    background:linear-gradient(135deg, var(--accent), #9b3fe0);
+    color:#1c0630;font-weight:900;font-size:16px;cursor:pointer;letter-spacing:.5px;
+    box-shadow:0 6px 20px -6px rgba(199,107,255,.55);transition:transform .12s var(--ease);
+  }
+  button.join:active{transform:scale(.97);}
+
+  .buzz-btn{
+    width:250px;height:250px;border-radius:50%;border:none;
+    background:radial-gradient(circle at 35% 30%, #ff5470, var(--bad));
+    box-shadow:0 0 50px rgba(255,56,96,.5);
+    color:#fff;font-family:'Anton',sans-serif;font-size:38px;letter-spacing:2px;
+    cursor:pointer;transition:transform .12s var(--ease), box-shadow .3s var(--ease), background .3s var(--ease);
+    animation:buzzReady 2s ease-in-out infinite;
+  }
+  @keyframes buzzReady{
+    0%,100%{box-shadow:0 0 50px rgba(255,56,96,.5);}
+    50%{box-shadow:0 0 70px rgba(255,56,96,.75);}
+  }
+  .buzz-btn:active{transform:scale(.94);}
+  .buzz-btn:disabled{
+    background:var(--panel);box-shadow:none;color:var(--muted);cursor:not-allowed;animation:none;
+  }
+  .status{
+    margin-top:24px;font-size:14.5px;color:var(--muted);line-height:1.6;
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 18px;
+  }
+  .status b{color:var(--ink);}
+  .out{color:var(--bad);font-weight:700;}
+  .active{color:var(--gold);font-weight:800;}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+<div class="wrap" id="joinView">
+  <h1 class="brand">EMOJI-RÄTSEL</h1>
+  <div class="brand-rule"></div>
+  <select id="nameInput"><option value="">— wähle deinen Namen —</option></select>
+  <button class="join" id="joinBtn">Beitreten</button>
+</div>
+
+<div class="wrap" id="gameView" style="display:none;">
+  <h1 class="brand">EMOJI-RÄTSEL</h1>
+  <div class="brand-rule"></div>
+  <div id="greeting"></div>
+  <button class="buzz-btn" id="buzzBtn">BUZZ</button>
+  <div class="status" id="status">Warte auf Rätsel…</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let myName = localStorage.getItem('er_name') || '';
+let state = { players:{}, riddleIndex:null, solved:false, buzzQueue:[], buzzedOut:[] };
+
+const joinView = document.getElementById('joinView');
+const gameView = document.getElementById('gameView');
+const buzzBtn = document.getElementById('buzzBtn');
+const statusEl = document.getElementById('status');
+
+function showGame(){
+  joinView.style.display='none';
+  gameView.style.display='block';
+  document.getElementById('greeting').textContent = 'Hi, ' + myName;
+}
+
+function populateNameSelect(){
+  const sel = document.getElementById('nameInput');
+  const names = Object.keys(typeof AVATARE!=='undefined' ? AVATARE : {});
+  sel.innerHTML = '<option value="">— wähle deinen Namen —</option>' +
+    names.map(n=>`<option value="${n}" ${n===myName?'selected':''}>${n}</option>`).join('');
+}
+populateNameSelect();
+
+if(myName) showGame();
+
+document.getElementById('joinBtn').onclick = async ()=>{
+  const val = document.getElementById('nameInput').value.trim();
+  if(!val) return;
+  myName = val;
+  localStorage.setItem('er_name', myName);
+  const { data } = await sb.from('er_state').select('state').eq('id',1).single();
+  const s = data?.state || {};
+  s.players = s.players || {};
+  if(s.players[myName]==null) s.players[myName] = 0;
+  await sb.from('er_state').update({ state: s }).eq('id',1);
+  showGame();
+};
+document.getElementById('nameInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('joinBtn').click();
+});
+
+async function loadState(){
+  const { data } = await sb.from('er_state').select('state').eq('id',1).single();
+  state = data?.state || state;
+  render();
+}
+loadState();
+setInterval(loadState, 2000);
+
+sb.channel('er_state_channel_buzz')
+  .on('postgres_changes', { event:'*', schema:'public', table:'er_state' }, payload=>{
+    state = payload.new.state || state;
+    render();
+  }).subscribe();
+
+function render(){
+  const hasRiddle = state.riddleIndex!=null;
+  const alreadyBuzzed = state.buzzQueue.includes(myName);
+  const isOut = state.buzzedOut.includes(myName);
+  const canBuzz = hasRiddle && !state.solved && !alreadyBuzzed;
+
+  buzzBtn.disabled = !canBuzz;
+  if(!hasRiddle){
+    statusEl.innerHTML = 'Warte auf Rätsel…';
+  } else if(state.solved){
+    statusEl.innerHTML = 'Runde vorbei — nächstes Rätsel kommt gleich.';
+  } else if(isOut){
+    statusEl.innerHTML = '<span class="out">Falsch geantwortet — warte auf nächste Runde.</span>';
+  } else if(alreadyBuzzed){
+    const active = state.buzzQueue.find(n=>!state.buzzedOut.includes(n));
+    statusEl.innerHTML = active===myName
+      ? '<span class="active">Du bist dran! Sag deine Antwort laut.</span>'
+      : 'Gebuzzert — warte, ob du dran kommst.';
+  } else {
+    statusEl.innerHTML = 'Buzzer ist offen!';
+  }
+}
+
+async function doBuzz(){
+  if(buzzBtn.disabled) return;
+  const { data } = await sb.from('er_state').select('state').eq('id',1).single();
+  const s = data?.state || {};
+  if(s.riddleIndex==null || s.solved) return;
+  s.buzzQueue = s.buzzQueue || [];
+  if(!s.buzzQueue.includes(myName)) s.buzzQueue.push(myName);
+  await sb.from('er_state').update({ state: s }).eq('id',1);
+}
+
+buzzBtn.addEventListener('click', doBuzz);
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space' && gameView.style.display!=='none'){
+    e.preventDefault();
+    doBuzz();
+  }
+});
+</script>
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../buzzer-fx.js"></script>
+</body>
+</html>
