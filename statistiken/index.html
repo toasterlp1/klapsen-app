@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Statistiken</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<style>
+  :root{
+    --bg:#0a0f1e; --bg2:#111a30; --panel:#111a30; --panel2:#16223f; --border:#1e2a4a;
+    --ink:#eef1f8; --muted:#8b96b3; --accent:#ff4d4d; --good:#3ddc84; --gold:#f5c542; --blue:#4d9fff; --violet:#c44dff;
+    --ease:cubic-bezier(.22,.9,.32,1); --ease-out:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{min-height:100vh;}
+  body{background:radial-gradient(ellipse at 50% -10%, #1a2340 0%, var(--bg) 60%);color:var(--ink);font-family:'Inter',sans-serif;overflow-x:hidden;padding:28px 16px 80px;}
+  .orbs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+  .orbs span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.34;}
+  .orbs .o1{width:48vw;height:48vw;top:-16vw;left:-10vw;background:radial-gradient(circle,rgba(77,159,255,.4),transparent 68%);animation:dA 26s var(--ease) infinite alternate;}
+  .orbs .o2{width:44vw;height:44vw;bottom:-16vw;right:-10vw;background:radial-gradient(circle,rgba(245,197,66,.34),transparent 68%);animation:dB 30s var(--ease) infinite alternate;}
+  @keyframes dA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(8vw,10vw) scale(1.15);}}
+  @keyframes dB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-8vw,-8vw) scale(1.12);}}
+
+  .wrap{position:relative;z-index:2;max-width:880px;margin:0 auto;}
+  h1{font-family:'Anton',sans-serif;font-size:clamp(36px,7vw,58px);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+  h1 span{color:var(--accent);}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:24px;}
+
+  .picker{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+  .pick{display:flex;align-items:center;gap:9px;background:var(--panel);border:2px solid var(--border);border-radius:999px;padding:6px 16px 6px 6px;cursor:pointer;color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;transition:transform .2s var(--ease),border-color .2s;}
+  .pick:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .pick.aktiv{border-color:var(--gold);box-shadow:0 0 20px -6px var(--gold);}
+  .pick .av{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#1b2138;}
+  .pick .fallback{width:32px;height:32px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:15px;color:var(--muted);}
+
+  .profil{animation:riseIn .5s var(--ease-out);}
+  .profil-head{display:flex;align-items:center;gap:18px;margin-bottom:22px;}
+  .profil-head .big-av{width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);box-shadow:0 0 30px -8px var(--gold);background:#1b2138;}
+  .profil-head .big-fallback{width:88px;height:88px;border-radius:50%;background:#1b2138;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:38px;color:var(--muted);}
+  .profil-head .who .nm{font-family:'Anton',sans-serif;font-size:34px;line-height:1;}
+  .profil-head .who .tag{color:var(--muted);font-size:14px;margin-top:4px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .kpi{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:16px;padding:18px;}
+  .kpi .k{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:8px;}
+  .kpi .v{font-family:'Anton',sans-serif;font-size:34px;line-height:1;}
+  .kpi .v small{font-size:16px;color:var(--muted);font-family:'Inter',sans-serif;font-weight:700;}
+  .kpi.gold .v{color:var(--gold);}
+  .kpi.good .v{color:var(--good);}
+  .kpi.blue .v{color:var(--blue);}
+
+  .card{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;}
+  .card-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:16px;}
+
+  /* Rivalen-Highlight */
+  .rivale{display:flex;align-items:center;gap:16px;}
+  .rivale .vs{display:flex;align-items:center;gap:12px;flex:1;}
+  .rivale .seite{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+  .rivale .seite .av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b2138;border:2px solid var(--border);}
+  .rivale .seite .av-fb{width:56px;height:56px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:24px;color:var(--muted);border:2px solid var(--border);}
+  .rivale .seite .nm{font-weight:800;font-size:14px;}
+  .rivale .mitte{font-family:'Anton',sans-serif;font-size:20px;color:var(--muted);}
+  .rivale .bilanz{display:flex;align-items:center;gap:6px;font-family:'Anton',sans-serif;font-size:28px;}
+  .rivale .bilanz .w{color:var(--good);}
+  .rivale .bilanz .l{color:var(--accent);}
+  .rivale-info{color:var(--muted);font-size:13px;margin-top:14px;text-align:center;}
+
+  /* Achievements */
+  .ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .ach{background:#0d1424;border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;transition:transform .2s var(--ease);}
+  .ach.hat{border-color:var(--gold);}
+  .ach.hat::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 0%, rgba(245,197,66,.14), transparent 60%);pointer-events:none;}
+  .ach.fehlt{opacity:.42;}
+  .ach:hover{transform:translateY(-3px);}
+  .ach .ic{font-size:30px;line-height:1;}
+  .ach .titel{font-weight:800;font-size:14px;}
+  .ach .desc{font-size:12px;color:var(--muted);line-height:1.4;}
+  .ach .global{position:absolute;top:10px;right:10px;font-size:9px;font-weight:900;letter-spacing:1px;color:var(--gold);background:rgba(245,197,66,.12);padding:3px 7px;border-radius:6px;}
+
+  .fmt-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .fmt-row:last-child{margin-bottom:0;}
+  .fmt-row .fn{width:130px;font-weight:800;font-size:14px;flex-shrink:0;}
+  .fmt-bar{flex:1;height:22px;border-radius:11px;background:#0d1424;overflow:hidden;position:relative;}
+  .fmt-bar .fill{height:100%;border-radius:11px;background:linear-gradient(90deg,var(--good),#2bbf72);transition:width .8s var(--ease-out);}
+  .fmt-row .pct{width:96px;text-align:right;font-family:'Anton',sans-serif;font-size:16px;flex-shrink:0;}
+  .fmt-row .pct small{font-family:'Inter',sans-serif;font-size:11px;color:var(--muted);font-weight:600;display:block;}
+
+  .h2h{display:flex;flex-direction:column;gap:10px;}
+  .h2h-row{display:flex;align-items:center;gap:12px;}
+  .h2h-row .av{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1b2138;flex-shrink:0;}
+  .h2h-row .fallback{width:36px;height:36px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--muted);flex-shrink:0;}
+  .h2h-row .gn{width:120px;font-weight:700;font-size:14px;flex-shrink:0;}
+  .h2h-bar{flex:1;height:20px;border-radius:10px;overflow:hidden;display:flex;background:#0d1424;}
+  .h2h-bar .win{background:var(--good);height:100%;}
+  .h2h-bar .loss{background:var(--accent);height:100%;}
+  .h2h-row .rec{width:70px;text-align:right;font-weight:800;font-size:13px;flex-shrink:0;}
+  .h2h-row .rec .w{color:var(--good);}
+  .h2h-row .rec .l{color:var(--accent);}
+
+  .leer{color:var(--muted);text-align:center;padding:40px 0;}
+  @keyframes riseIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;}}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+<div class="orbs" aria-hidden="true"><span class="o1"></span><span class="o2"></span></div>
+
+<div class="wrap">
+  <h1>Stat<span>istiken</span></h1>
+  <p class="sub">Wähle einen Spieler und sieh dir sein Profil an.</p>
+  <div class="picker" id="picker"></div>
+  <div id="profil"><div class="leer">Wird geladen…</div></div>
+</div>
+
+<script src="../bestenliste.js"></script>
+<script>
+let stats = null;
+let aktiv = null;
+let globalAch = {};
+
+function bild(name, cls, fbCls){
+  const url = (typeof avatarFor === 'function') ? avatarFor(name) : null;
+  if(url) return '<img class="'+cls+'" src="'+url+'" alt="">';
+  return '<div class="'+fbCls+'">'+(name?name[0].toUpperCase():'?')+'</div>';
+}
+
+function fmtName(key){
+  return (stats.formatNamen && stats.formatNamen[key]) || key;
+}
+
+function pct(teil, ganz){
+  if(!ganz) return 0;
+  return Math.round((teil/ganz)*100);
+}
+
+// Globale Rekorde (nur ein Spieler bekommt sie) einmal berechnen
+function berechneGlobalAch(){
+  const alle = Object.values(stats.spieler).filter(s => s.spiele > 0);
+  if(!alle.length) return {};
+  const max = (fn) => alle.reduce((best, s) => fn(s) > fn(best) ? s : best, alle[0]);
+  return {
+    champion: max(s => s.siege).spieler,
+    punktekoenig: max(s => s.punkte).spieler,
+    vielspieler: max(s => s.spiele).spieler
+  };
+}
+
+function rivaleVon(s){
+  // Rivale = Gegner mit den meisten gemeinsamen Duellen, knappste Bilanz als Tiebreaker
+  const gegner = Object.values(s.gegner)
+    .map(g => ({ ...g, total: g.davor + g.dahinter }))
+    .filter(g => g.total >= 2);
+  if(!gegner.length) return null;
+  gegner.sort((a,b) => {
+    if(b.total !== a.total) return b.total - a.total;
+    return Math.abs(a.davor - a.dahinter) - Math.abs(b.davor - b.dahinter);
+  });
+  return gegner[0];
+}
+
+function achievementsVon(s){
+  const sq = pct(s.siege, s.spiele);
+  const pq = pct(s.podeste, s.spiele);
+  const formate = Object.values(s.proFormat);
+  const formatMeister = formate.find(f => f.spiele >= 3 && f.siege === f.spiele);
+  const perfekteBilanz = Object.values(s.gegner).find(g => (g.davor + g.dahinter) >= 3 && g.dahinter === 0);
+
+  const liste = [
+    { id:'champion',   ic:'👑', titel:'Champion',        desc:'Die meisten Siege der Gruppe',    global:true,  hat: globalAch.champion === s.spieler },
+    { id:'punktekoenig', ic:'💰', titel:'Punktekönig',   desc:'Die meisten Gesamtpunkte',        global:true,  hat: globalAch.punktekoenig === s.spieler },
+    { id:'vielspieler', ic:'🎮', titel:'Vielspieler',    desc:'Die meisten gespielten Spiele',   global:true,  hat: globalAch.vielspieler === s.spieler },
+    { id:'ersterSieg', ic:'⭐', titel:'Erster Sieg',     desc:'Mindestens ein Spiel gewonnen',   global:false, hat: s.siege >= 1 },
+    { id:'seriensieger', ic:'🔥', titel:'Seriensieger',  desc:'Siegquote von 50% oder mehr',     global:false, hat: s.spiele >= 5 && sq >= 50 },
+    { id:'podest',     ic:'🏆', titel:'Podest-Stammgast',desc:'75% oder mehr Podestplätze',      global:false, hat: s.spiele >= 5 && pq >= 75 },
+    { id:'allrounder', ic:'🎲', titel:'Allrounder',      desc:'In 5+ Formaten gespielt',         global:false, hat: formate.length >= 5 },
+    { id:'formatMeister', ic:'🎯', titel:'Format-Meister',desc:'100% Siege in einem Format',      global:false, hat: !!formatMeister },
+    { id:'nemesis',    ic:'😈', titel:'Angstgegner',     desc:'Gegen einen Rivalen nie verloren',global:false, hat: !!perfekteBilanz },
+    { id:'aufsteiger', ic:'📈', titel:'Aufsteiger',      desc:'Mindestens 10 Spiele gespielt',   global:false, hat: s.spiele >= 10 }
+  ];
+  return liste;
+}
+
+function zeichnePicker(){
+  const p = document.getElementById('picker');
+  const namen = Object.keys(stats.spieler).sort((a,b)=>stats.spieler[b].spiele - stats.spieler[a].spiele);
+  p.innerHTML = namen.map(n =>
+    '<button class="pick'+(n===aktiv?' aktiv':'')+'" data-n="'+n+'">'+bild(n,'av','fallback')+'<span>'+n+'</span></button>'
+  ).join('');
+  Array.from(p.querySelectorAll('.pick')).forEach(b => {
+    b.onclick = () => { aktiv = b.dataset.n; zeichnePicker(); zeichneProfil(); };
+  });
+}
+
+function zeichneProfil(){
+  const ziel = document.getElementById('profil');
+  if(!aktiv){ ziel.innerHTML = '<div class="leer">Wähle oben einen Spieler.</div>'; return; }
+  const s = stats.spieler[aktiv];
+  if(!s || !s.spiele){ ziel.innerHTML = '<div class="leer">Noch keine Spiele für '+aktiv+'.</div>'; return; }
+
+  const siegQuote = pct(s.siege, s.spiele);
+  const podestQuote = pct(s.podeste, s.spiele);
+  const schnitt = (s.platzSumme / s.spiele).toFixed(1);
+  const formate = Object.values(s.proFormat).sort((a,b)=>b.spiele-a.spiele);
+
+  const kopf =
+    '<div class="profil-head">' +
+      bild(aktiv,'big-av','big-fallback') +
+      '<div class="who"><div class="nm">'+aktiv+'</div>' +
+      '<div class="tag">'+s.spiele+' Spiele gespielt</div></div>' +
+    '</div>';
+
+  const kpis =
+    '<div class="kpi-grid">' +
+      '<div class="kpi gold"><div class="k">Siege</div><div class="v">'+s.siege+' <small>/ '+s.spiele+'</small></div></div>' +
+      '<div class="kpi good"><div class="k">Siegquote</div><div class="v">'+siegQuote+'<small>%</small></div></div>' +
+      '<div class="kpi blue"><div class="k">Podest</div><div class="v">'+podestQuote+'<small>%</small></div></div>' +
+      '<div class="kpi"><div class="k">Ø Platz</div><div class="v">'+schnitt+'</div></div>' +
+      '<div class="kpi"><div class="k">Punkte gesamt</div><div class="v">'+s.punkte.toLocaleString('de-CH')+'</div></div>' +
+    '</div>';
+
+  // Rivalen-Highlight
+  const riv = rivaleVon(s);
+  let rivaleHtml = '';
+  if(riv){
+    const fuehrt = riv.davor > riv.dahinter;
+    const gleich = riv.davor === riv.dahinter;
+    const info = gleich
+      ? 'Ein Kopf-an-Kopf-Rennen — die Bilanz ist ausgeglichen.'
+      : (fuehrt ? aktiv+' hat gegen '+riv.gegner+' die Nase vorn.' : riv.gegner+' führt das Duell knapp an.');
+    rivaleHtml =
+      '<div class="card"><div class="card-label">Grösster Rivale</div>' +
+        '<div class="rivale"><div class="vs">' +
+          '<div class="seite">'+bild(aktiv,'av','av-fb')+'<div class="nm">'+aktiv+'</div></div>' +
+          '<div class="bilanz"><span class="w">'+riv.davor+'</span><span style="color:var(--muted)">:</span><span class="l">'+riv.dahinter+'</span></div>' +
+          '<div class="seite">'+bild(riv.gegner,'av','av-fb')+'<div class="nm">'+riv.gegner+'</div></div>' +
+        '</div></div>' +
+        '<div class="rivale-info">'+info+' ('+(riv.davor+riv.dahinter)+' gemeinsame Runden)</div>' +
+      '</div>';
+  }
+
+  // Achievements
+  const achs = achievementsVon(s);
+  const anzahlHat = achs.filter(a => a.hat).length;
+  const achHtml =
+    '<div class="card"><div class="card-label">Abzeichen ('+anzahlHat+' / '+achs.length+')</div>' +
+      '<div class="ach-grid">' +
+        achs.map(a =>
+          '<div class="ach '+(a.hat?'hat':'fehlt')+'">' +
+            (a.global?'<span class="global">REKORD</span>':'') +
+            '<span class="ic">'+a.ic+'</span>' +
+            '<span class="titel">'+a.titel+'</span>' +
+            '<span class="desc">'+a.desc+'</span>' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+    '</div>';
+
+  // Nach Format
+  let fmtCard = '<div class="card"><div class="card-label">Nach Format</div>';
+  formate.forEach(f => {
+    const q = pct(f.siege, f.spiele);
+    fmtCard +=
+      '<div class="fmt-row">' +
+        '<div class="fn">'+fmtName(f.format)+'</div>' +
+        '<div class="fmt-bar"><div class="fill" style="width:'+q+'%"></div></div>' +
+        '<div class="pct">'+q+'%<small>'+f.siege+'/'+f.spiele+' Siege</small></div>' +
+      '</div>';
+  });
+  fmtCard += '</div>';
+
+  // Head-to-Head
+  const gegner = Object.values(s.gegner)
+    .map(g => ({ ...g, total:g.davor+g.dahinter }))
+    .filter(g => g.total > 0)
+    .sort((a,b)=> b.total - a.total);
+  let h2hCard = '';
+  if(gegner.length){
+    h2hCard = '<div class="card"><div class="card-label">Head-to-Head</div><div class="h2h">';
+    gegner.forEach(g => {
+      const wPct = pct(g.davor, g.total);
+      h2hCard +=
+        '<div class="h2h-row">' +
+          bild(g.gegner,'av','fallback') +
+          '<div class="gn">'+g.gegner+'</div>' +
+          '<div class="h2h-bar"><div class="win" style="width:'+wPct+'%"></div><div class="loss" style="width:'+(100-wPct)+'%"></div></div>' +
+          '<div class="rec"><span class="w">'+g.davor+'</span> : <span class="l">'+g.dahinter+'</span></div>' +
+        '</div>';
+    });
+    h2hCard += '</div></div>';
+  }
+
+  ziel.innerHTML = '<div class="profil">' + kopf + kpis + rivaleHtml + achHtml + fmtCard + h2hCard + '</div>';
+}
+
+(async function(){
+  if(!window.KA_SB){
+    document.getElementById('profil').innerHTML = '<div class="leer">Nicht eingeloggt. Seite neu laden.</div>';
+    return;
+  }
+  stats = await ladeSpielerStatistiken();
+  if(!stats || !Object.keys(stats.spieler).length){
+    document.getElementById('picker').innerHTML = '';
+    document.getElementById('profil').innerHTML = '<div class="leer">Noch keine Ergebnisse vorhanden.</div>';
+    return;
+  }
+  globalAch = berechneGlobalAch();
+  const namen = Object.keys(stats.spieler).sort((a,b)=>stats.spieler[b].spiele - stats.spieler[a].spiele);
+  aktiv = namen[0];
+  zeichnePicker();
+  zeichneProfil();
+})();
+</script>
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+</body>
+</html>

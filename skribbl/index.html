@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Klapsen App — Skribbl</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<script src="../symbole.js"></script>
+<script src="woerter.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#12172a; --panel2:#0d1220; --border:#232b45;
+    --ink:#eef1f8; --muted:#6b7488;
+    --accent:#00e5c7; --good:#22c55e; --bad:#ff3860; --gold:#ffd166;
+    --draw:#8b5cf6;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(ellipse at 50% 0%, #1a1035 0%, var(--bg) 62%);
+    color:var(--ink);font-family:'Inter',sans-serif;
+    display:flex;flex-direction:column;
+    padding:16px;gap:14px;
+  }
+
+  h1{font-family:'Anton',sans-serif;letter-spacing:2px;font-size:26px;text-align:center;}
+  h1 span{color:var(--draw);}
+
+  #joinView{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  }
+  #joinView .box{width:min(340px,92vw);display:flex;flex-direction:column;gap:10px;}
+  select,input[type=number]{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--ink);
+    padding:13px;border-radius:11px;font-size:16px;font-family:'Inter',sans-serif;text-align:center;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:900;font-size:14px;letter-spacing:.5px;
+    border:none;border-radius:11px;padding:13px 18px;cursor:pointer;min-height:44px;
+    background:#1b2136;color:var(--ink);border:1px solid var(--border);
+    transition:filter .15s, transform .1s;
+  }
+  .btn:hover:not(:disabled){filter:brightness(1.35);}
+  .btn:active:not(:disabled){transform:scale(.97);}
+  .btn:disabled{opacity:.35;cursor:default;}
+  .btn.go{background:var(--draw);color:#fff;border-color:transparent;}
+  .btn.warn{background:var(--gold);color:#2b2000;border-color:transparent;}
+  .btn.danger{background:transparent;border-color:var(--bad);color:var(--bad);}
+  .btn.tiny{padding:7px 12px;min-height:0;font-size:11px;font-weight:700;flex:0 0 auto;}
+
+  #lobbyView{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+  .lobby-card{
+    width:min(440px,94vw);background:var(--panel);border:1px solid var(--border);
+    border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;
+  }
+  .lobby-players{display:flex;flex-direction:column;gap:7px;}
+  .lp{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;
+  }
+  .lp img{width:30px;height:30px;border-radius:50%;}
+  .lp .host{margin-left:auto;font-size:10px;font-weight:900;color:var(--gold);letter-spacing:1px;}
+  .setting{display:flex;align-items:center;gap:10px;justify-content:space-between;}
+  .setting label{font-size:13px;color:var(--muted);font-weight:700;}
+  .setting input{width:90px;}
+  .hint{font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
+
+  #gameView{flex:1;display:none;flex-direction:column;gap:12px;min-height:0;}
+
+  .topbar{
+    display:flex;align-items:center;gap:12px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;
+  }
+  .topbar .rnd{font-family:'Anton',sans-serif;font-size:14px;letter-spacing:1.5px;color:var(--muted);}
+  .word-slot{
+    flex:1;text-align:center;font-family:'Anton',sans-serif;letter-spacing:5px;font-size:22px;
+  }
+  .word-slot.reveal{color:var(--good);}
+  .timer{
+    font-family:'Anton',sans-serif;font-size:22px;color:var(--gold);min-width:44px;text-align:right;
+  }
+  .timer.low{color:var(--bad);animation:blink .7s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+  .timebar{height:5px;border-radius:3px;background:#141a2c;overflow:hidden;margin-top:-6px;}
+  .timebar .fill{height:100%;background:linear-gradient(90deg,#ff5470,#c41230);transition:none;}
+
+  .main{display:grid;grid-template-columns:190px 1fr 240px;gap:12px;flex:1;min-height:0;}
+  @media(max-width:900px){
+    .main{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;}
+    .players-col{order:1;} .canvas-col{order:2;} .chat-col{order:3;}
+    .players-col{display:flex;gap:6px;overflow-x:auto;}
+    .players-col .p{flex:0 0 auto;min-width:110px;}
+  }
+
+  .col{
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;
+  }
+  .col h2{
+    font-family:'Anton',sans-serif;font-size:11px;letter-spacing:2px;color:var(--muted);
+    text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);
+  }
+
+  .p{
+    position:relative;display:flex;align-items:center;gap:8px;
+    padding:8px 10px;background:var(--panel2);border:1px solid var(--border);
+    border-radius:10px;font-size:13px;transition:all .3s var(--ease);
+  }
+  .p img{width:28px;height:28px;border-radius:50%;flex:0 0 28px;}
+  .p .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
+  .p .sc{font-family:'Anton',sans-serif;font-size:16px;color:var(--accent);}
+  .p.guessed{border-color:var(--good);background:rgba(34,197,94,.12);}
+  .p.guessed .nm{color:#6ee7a8;}
+  .p.drawing{border-color:var(--draw);background:rgba(139,92,246,.14);}
+
+  .canvas-col{position:relative;align-items:center;justify-content:center;padding:10px;}
+  #board{
+    background:#fff;border-radius:10px;width:100%;height:auto;aspect-ratio:4/3;
+    touch-action:none;cursor:crosshair;max-height:100%;
+    box-shadow:0 8px 30px rgba(0,0,0,.5);
+  }
+  #board.locked{cursor:default;}
+
+  .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;}
+  .swatch{
+    width:26px;height:26px;border-radius:7px;border:2px solid rgba(255,255,255,.25);
+    cursor:pointer;transition:transform .12s;
+  }
+  .swatch:hover{transform:scale(1.12);}
+  .swatch.on{border-color:#fff;transform:scale(1.15);box-shadow:0 0 10px rgba(255,255,255,.5);}
+  .mixer{position:relative;width:26px;height:26px;border-radius:7px;cursor:pointer;overflow:hidden;border:2px dashed rgba(255,255,255,.4);display:inline-flex;align-items:center;justify-content:center;background:conic-gradient(from 0deg,#e11d48,#f59e0b,#22c55e,#3b82f6,#8b5cf6,#e11d48);vertical-align:middle;}
+  .mixer input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;}
+  .mixer .mixer-ic{font-weight:900;font-size:16px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none;}
+  .sizes{display:flex;gap:5px;}
+  .size{
+    width:28px;height:26px;border-radius:7px;background:var(--panel2);
+    border:1px solid var(--border);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .size.on{border-color:var(--accent);}
+  .size i{display:block;border-radius:50%;background:var(--ink);}
+
+  .overlay{
+    position:absolute;inset:0;z-index:20;border-radius:14px;
+    background:rgba(10,14,26,.93);backdrop-filter:blur(6px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    text-align:center;padding:20px;
+  }
+  .overlay h3{font-family:'Anton',sans-serif;font-size:19px;letter-spacing:2px;}
+  .overlay .sub{font-size:13px;color:var(--muted);}
+  .wordpick{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .wordpick button{
+    font-family:'Anton',sans-serif;font-size:17px;letter-spacing:1px;
+    background:var(--panel);border:2px solid var(--draw);color:var(--ink);
+    padding:14px 22px;border-radius:12px;cursor:pointer;transition:all .15s;
+  }
+  .wordpick button:hover{background:var(--draw);transform:translateY(-2px);}
+  .big-word{font-family:'Anton',sans-serif;font-size:30px;letter-spacing:2px;color:var(--good);}
+
+  .chat-col{min-height:0;}
+  .chat{
+    flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;
+    font-size:13px;min-height:120px;
+  }
+  .msg{padding:6px 9px;background:var(--panel2);border-radius:8px;line-height:1.4;word-break:break-word;}
+  .msg b{color:var(--muted);}
+  .msg.correct{background:rgba(34,197,94,.16);color:#6ee7a8;font-weight:700;}
+  .msg.system{background:transparent;color:var(--muted);font-style:italic;text-align:center;}
+  .msg.close{background:rgba(255,209,102,.14);color:var(--gold);}
+  .guessbox{display:flex;gap:6px;}
+  .guessbox input{
+    flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--ink);
+    padding:11px;border-radius:10px;font-size:15px;font-family:'Inter',sans-serif;outline:none;
+  }
+  .guessbox input:focus{border-color:var(--accent);}
+  .guessbox input:disabled{opacity:.4;}
+
+  .end{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  }
+  .podium{display:flex;flex-direction:column;gap:8px;width:min(360px,92vw);}
+  .pod{
+    display:flex;align-items:center;gap:12px;padding:12px 16px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  }
+  .pod:first-child{border-color:var(--gold);background:rgba(255,209,102,.1);}
+  .pod .rank{font-family:'Anton',sans-serif;font-size:20px;color:var(--muted);width:28px;}
+  .pod:first-child .rank{color:var(--gold);}
+  .pod img{width:36px;height:36px;border-radius:50%;}
+  .pod .nm{flex:1;font-weight:700;}
+  .pod .sc{font-family:'Anton',sans-serif;font-size:22px;color:var(--accent);}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+
+<div id="joinView">
+  <h1>SKR<span>IBBL</span></h1>
+  <div class="box">
+    <select id="nameSel"></select>
+    <button class="btn go" id="joinBtn">BEITRETEN</button>
+  </div>
+</div>
+
+<div id="lobbyView" style="display:none;">
+  <h1>SKR<span>IBBL</span></h1>
+  <div class="lobby-card">
+    <h2 style="font-family:'Anton',sans-serif;font-size:12px;letter-spacing:2px;color:var(--muted);">LOBBY</h2>
+    <div class="lobby-players" id="lobbyPlayers"></div>
+
+    <div id="hostSettings" style="display:none;flex-direction:column;gap:10px;">
+      <div class="setting">
+        <label>Sekunden pro Zeichnung</label>
+        <input type="number" id="setTime" min="30" max="180" step="10" value="80">
+      </div>
+      <div class="setting">
+        <label>Runden (jeder zeichnet einmal pro Runde)</label>
+        <input type="number" id="setRounds" min="1" max="8" value="3">
+      </div>
+      <button class="btn go" id="startBtn">SPIEL STARTEN</button>
+    </div>
+
+    <div class="hint" id="lobbyHint">Warte auf den Start…</div>
+    <button class="btn danger" id="leaveBtn" style="font-size:12px;padding:8px;min-height:0;">Lobby verlassen</button>
+  </div>
+</div>
+
+<div id="gameView">
+  <div class="topbar">
+    <span class="rnd" id="roundLbl">RUNDE –</span>
+    <span class="word-slot" id="wordSlot"></span>
+    <span class="timer" id="timer">–</span>
+    <button class="btn danger tiny" id="closeBtn" style="display:none;">Spiel beenden</button>
+    <button class="btn tiny" id="leaveGameBtn">Verlassen</button>
+  </div>
+  <div class="timebar"><div class="fill" id="timeFill"></div></div>
+
+  <div class="main">
+    <div class="col players-col" id="playersCol"></div>
+
+    <div class="col canvas-col">
+      <canvas id="board" width="800" height="600"></canvas>
+      <div class="tools" id="tools" style="display:none;">
+        <span class="swatch on" data-c="#111111" style="background:#111111"></span>
+        <span class="swatch" data-c="#6b7280" style="background:#6b7280"></span>
+        <span class="swatch" data-c="#ffffff" style="background:#ffffff"></span>
+        <span class="swatch" data-c="#e11d48" style="background:#e11d48"></span>
+        <span class="swatch" data-c="#f97316" style="background:#f97316"></span>
+        <span class="swatch" data-c="#f59e0b" style="background:#f59e0b"></span>
+        <span class="swatch" data-c="#eab308" style="background:#eab308"></span>
+        <span class="swatch" data-c="#22c55e" style="background:#22c55e"></span>
+        <span class="swatch" data-c="#10b981" style="background:#10b981"></span>
+        <span class="swatch" data-c="#06b6d4" style="background:#06b6d4"></span>
+        <span class="swatch" data-c="#3b82f6" style="background:#3b82f6"></span>
+        <span class="swatch" data-c="#6366f1" style="background:#6366f1"></span>
+        <span class="swatch" data-c="#8b5cf6" style="background:#8b5cf6"></span>
+        <span class="swatch" data-c="#d946ef" style="background:#d946ef"></span>
+        <span class="swatch" data-c="#ec4899" style="background:#ec4899"></span>
+        <span class="swatch" data-c="#92400e" style="background:#92400e"></span>
+        <label class="mixer" title="Eigene Farbe mischen"><input type="color" id="colorPicker" value="#111111"><span class="mixer-ic">+</span></label>
+        <div class="sizes">
+          <span class="size on" data-s="4"><i style="width:5px;height:5px;"></i></span>
+          <span class="size" data-s="10"><i style="width:10px;height:10px;"></i></span>
+          <span class="size" data-s="22"><i style="width:16px;height:16px;"></i></span>
+        </div>
+        <button class="btn" id="undoBtn" style="padding:6px 12px;min-height:0;font-size:12px;">Rückgängig</button>
+        <button class="btn" id="fillBtn" style="padding:6px 12px;min-height:0;font-size:12px;">Füllen</button>
+        <button class="btn" id="eraserBtn" style="padding:6px 12px;min-height:0;font-size:12px;">Radierer</button>
+        <button class="btn danger" id="clearBtn" style="padding:6px 12px;min-height:0;font-size:12px;">Alles löschen</button>
+      </div>
+      <div class="overlay" id="overlay" style="display:none;"></div>
+    </div>
+
+    <div class="col chat-col">
+      <h2>Raten</h2>
+      <div class="chat" id="chat"></div>
+      <div class="guessbox">
+        <input type="text" id="guessInput" placeholder="Deine Antwort…" maxlength="40" autocomplete="off">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let myName = localStorage.getItem('skr_name') || '';
+let state = null;
+let letzteStrichId = 0;
+let lastPhase = null;
+let lastTurnKey = null;
+
+const $ = id => document.getElementById(id);
+const canvas = $('board');
+const ctx = canvas.getContext('2d');
+
+function leererState(){
+  return {
+    phase: 'lobby',
+    players: {},
+    hostName: null,
+    sekunden: 80,
+    runden: 3,
+    runde: 0,
+    reihenfolge: [],
+    turnIndex: -1,
+    zeichner: null,
+    wortAuswahl: [],
+    wort: null,
+    benutzteWoerter: [],
+    startAt: null,
+    pauseBis: null,
+    chat: [],
+    strokeRunde: 0
+  };
+}
+
+async function ladeState(){
+  const { data } = await sb.from('skr_state').select('state').eq('id',1).single();
+  const s = data?.state;
+  return (s && s.phase) ? s : leererState();
+}
+async function speichere(s){
+  await sb.from('skr_state').update({ state:s, updated_at:new Date().toISOString() }).eq('id',1);
+  state = s;
+}
+
+function fuelleNamen(){
+  const sel = $('nameSel');
+  const namen = Object.keys(typeof AVATARE !== 'undefined' ? AVATARE : {});
+  sel.innerHTML = '<option value="">— wähle deinen Namen —</option>' +
+    namen.map(n => `<option value="${n}" ${n===myName?'selected':''}>${n}</option>`).join('');
+}
+fuelleNamen();
+
+$('joinBtn').onclick = async () => {
+  const val = $('nameSel').value.trim();
+  if(!val) return;
+  myName = val;
+  localStorage.setItem('skr_name', myName);
+  const s = await ladeState();
+  s.players = s.players || {};
+  if(!s.players[myName]) s.players[myName] = { score: 0, guessedAt: null };
+  if(!s.hostName) s.hostName = myName;
+  await speichere(s);
+  zeige();
+};
+
+async function verlassen(){
+  const s = await ladeState();
+  const warZeichner = (s.zeichner === myName);
+  delete s.players[myName];
+
+  if(s.hostName === myName){
+    const rest = Object.keys(s.players);
+    s.hostName = rest.length ? rest[0] : null;
+  }
+
+  if(Array.isArray(s.reihenfolge)){
+    const vorher = s.reihenfolge.slice(0, s.turnIndex + 1).filter(n => n !== myName).length;
+    s.reihenfolge = s.reihenfolge.filter(n => n !== myName);
+    s.turnIndex = vorher - 1;
+  }
+
+  const rest = Object.keys(s.players);
+  if(rest.length < 2 && s.phase !== 'lobby'){
+
+    s.phase = 'lobby';
+    s.zeichner = null; s.wort = null; s.startAt = null;
+  } else if(warZeichner && s.phase !== 'lobby' && s.phase !== 'ende'){
+
+    s.chat = s.chat || [];
+    s.chat.push({ name:'', text:`${myName} hat das Spiel verlassen`, art:'system' });
+    await speichere(s);
+    await naechsterZug(s);
+    myName = '';
+    localStorage.removeItem('skr_name');
+    state = s;
+    zeige();
+    return;
+  }
+
+  await speichere(s);
+  myName = '';
+  localStorage.removeItem('skr_name');
+  state = s;
+  zeige();
+}
+
+$('leaveBtn').onclick = verlassen;
+$('leaveGameBtn').onclick = async () => {
+  if(!confirm('Spiel wirklich verlassen? Deine Punkte gehen verloren.')) return;
+  await verlassen();
+};
+
+$('closeBtn').onclick = async () => {
+  if(!confirm('Spiel für ALLE beenden und zurück in die Lobby?')) return;
+  const s = await ladeState();
+  if(s.hostName !== myName) return;
+  s.phase = 'lobby';
+  s.zeichner = null; s.wort = null; s.wortAuswahl = [];
+  s.startAt = null; s.pauseBis = null;
+  s.runde = 0; s.turnIndex = -1; s.reihenfolge = [];
+  s.chat = [];
+  await speichere(s);
+  await sb.from('skr_strokes').delete().neq('id', 0);
+};
+
+$('startBtn').onclick = async () => {
+  const s = await ladeState();
+  if(s.hostName !== myName) return;
+  const namen = Object.keys(s.players);
+  if(namen.length < 2){ alert('Mindestens 2 Spieler nötig.'); return; }
+
+  s.sekunden = Math.max(30, Math.min(180, parseInt($('setTime').value) || 80));
+  s.runden   = Math.max(1, Math.min(8, parseInt($('setRounds').value) || 3));
+  s.benutzteWoerter = [];
+  s.runde = 1;
+  s.reihenfolge = mischen(namen);
+  s.turnIndex = -1;
+  s.chat = [];
+  Object.keys(s.players).forEach(n => { s.players[n].score = 0; s.players[n].guessedAt = null; });
+  await naechsterZug(s);
+};
+
+function mischen(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function naechsterZug(s){
+  s.turnIndex += 1;
+
+  if(s.turnIndex >= s.reihenfolge.length){
+    s.runde += 1;
+    if(s.runde > s.runden){
+      s.phase = 'ende';
+      await speichere(s);
+      return;
+    }
+    s.reihenfolge = mischen(Object.keys(s.players));
+    s.turnIndex = 0;
+  }
+
+  const zeichner = s.reihenfolge[s.turnIndex];
+
+  if(!s.players[zeichner]){
+    return await naechsterZug(s);
+  }
+
+  s.zeichner = zeichner;
+  s.wort = null;
+  s.wortAuswahl = dreiWoerter(s);
+  s.phase = 'wortwahl';
+  s.startAt = null;
+  s.strokeRunde = (s.strokeRunde || 0) + 1;
+  Object.keys(s.players).forEach(n => { s.players[n].guessedAt = null; });
+  s.chat = [];
+  await speichere(s);
+}
+
+function dreiWoerter(s){
+  const benutzt = s.benutzteWoerter || [];
+  const frei = WOERTER.filter(w => !benutzt.includes(w));
+  const pool = frei.length >= 3 ? frei : WOERTER;
+  const gewaehlt = mischen(pool).slice(0, 3);
+  s.benutzteWoerter = [...benutzt, ...gewaehlt];
+  return gewaehlt;
+}
+
+async function wortGewaehlt(wort){
+  const s = await ladeState();
+  if(s.zeichner !== myName || s.phase !== 'wortwahl') return;
+  s.wort = wort;
+  s.phase = 'zeichnen';
+  s.startAt = Date.now();
+  await speichere(s);
+  await sb.from('skr_strokes').delete().neq('id', 0);
+  letzteStrichId = 0;
+  eigeneZuege = [];
+}
+
+async function zugBeenden(s){
+  if(s.phase !== 'zeichnen') return;
+  const rater = Object.keys(s.players).filter(n => n !== s.zeichner);
+  const richtige = rater.filter(n => s.players[n].guessedAt != null).length;
+
+  if(richtige > 0 && s.players[s.zeichner]){
+    const anteil = richtige / Math.max(1, rater.length);
+    s.players[s.zeichner].score += Math.round(20 + anteil * 30);
+  }
+  s.chat.push({ name:'', text:`Das Wort war: ${s.wort}`, art:'system' });
+  s.phase = 'pause';
+  s.pauseBis = Date.now() + 4000;
+  await speichere(s);
+}
+
+setInterval(async () => {
+  if(!state || !myName) return;
+  if(state.hostName !== myName) return;
+  if(state.phase !== 'pause') return;
+  if(state.pauseBis && Date.now() < state.pauseBis) return;
+  const s = await ladeState();
+  if(s.phase !== 'pause') return;
+  if(s.pauseBis && Date.now() < s.pauseBis) return;
+  await naechsterZug(s);
+}, 800);
+
+setInterval(async () => {
+  if(!state || !myName) return;
+  if(state.hostName !== myName) return;
+  if(state.phase !== 'zeichnen' || !state.startAt) return;
+  const rest = state.sekunden - (Date.now() - state.startAt) / 1000;
+  if(rest > -3) return;
+  const s = await ladeState();
+  if(s.phase === 'zeichnen') await zugBeenden(s);
+}, 1500);
+
+function normalisiere(t){
+  return t.toLowerCase().trim()
+    .replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]/g,'');
+}
+
+function fastRichtig(a, b){
+  if(Math.abs(a.length - b.length) > 1) return false;
+  let fehler = 0, i = 0, j = 0;
+  while(i < a.length && j < b.length){
+    if(a[i] === b[j]){ i++; j++; continue; }
+    fehler++;
+    if(fehler > 1) return false;
+    if(a.length > b.length) i++;
+    else if(a.length < b.length) j++;
+    else { i++; j++; }
+  }
+  return (fehler + (a.length - i) + (b.length - j)) <= 1;
+}
+
+$('guessInput').addEventListener('keydown', async e => {
+  if(e.key !== 'Enter') return;
+  const text = e.target.value.trim();
+  if(!text) return;
+  e.target.value = '';
+
+  const s = await ladeState();
+  if(s.phase !== 'zeichnen') return;
+  if(s.zeichner === myName) return;
+  if(s.players[myName] && s.players[myName].guessedAt) return;
+
+  const ziel = normalisiere(s.wort || '');
+  const tipp = normalisiere(text);
+
+  if(tipp === ziel){
+
+    const verstrichen = (Date.now() - s.startAt) / 1000;
+    const anteil = Math.max(0, 1 - verstrichen / s.sekunden);
+    const punkte = Math.round(30 + anteil * 70);
+    s.players[myName].score += punkte;
+    s.players[myName].guessedAt = Date.now();
+    s.chat.push({ name: myName, text: `hat es erraten! +${punkte}`, art: 'correct' });
+
+    const rater = Object.keys(s.players).filter(n => n !== s.zeichner);
+    const alleRichtig = rater.length > 0 && rater.every(n => s.players[n].guessedAt != null);
+    await speichere(s);
+    if(alleRichtig) await zugBeenden(s);
+  } else if(fastRichtig(tipp, ziel)){
+    s.chat.push({ name: myName, text: `${text} — ganz nah dran!`, art: 'close' });
+    await speichere(s);
+  } else {
+    s.chat.push({ name: myName, text: text, art: '' });
+    await speichere(s);
+  }
+});
+
+let malt = false, farbe = '#111111', dicke = 4, radierer = false, fuellen = false;
+let letzterPunkt = null;
+let strichPuffer = [];
+let aktuellerZug = null;
+let eigeneZuege = [];
+
+function pos(e){
+  const r = canvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return {
+    x: (p.clientX - r.left) / r.width * canvas.width,
+    y: (p.clientY - r.top) / r.height * canvas.height
+  };
+}
+
+function darfMalen(){
+  return state && state.phase === 'zeichnen' && state.zeichner === myName;
+}
+
+function start(e){
+  if(!darfMalen()) return;
+  e.preventDefault();
+  const p = pos(e);
+
+  aktuellerZug = (Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+
+  if(fuellen){
+    fuelleFlaeche(p.x, p.y, farbe);
+    sendeFuellung(p.x, p.y, farbe);
+    eigeneZuege.push(aktuellerZug);
+    return;
+  }
+
+  malt = true;
+  letzterPunkt = p;
+  strichPuffer = [letzterPunkt];
+  eigeneZuege.push(aktuellerZug);
+}
+
+async function sendeFuellung(x, y, f){
+  await sb.from('skr_strokes').insert({
+    runde: state.strokeRunde || 0,
+    data: { typ:'fuellung', x: Math.round(x), y: Math.round(y), farbe: f, zug: aktuellerZug }
+  });
+}
+
+function bewegen(e){
+  if(!malt || !darfMalen()) return;
+  e.preventDefault();
+  const p = pos(e);
+  malLinie(letzterPunkt, p, radierer ? '#ffffff' : farbe, radierer ? dicke * 3 : dicke);
+  strichPuffer.push(p);
+  letzterPunkt = p;
+
+  if(strichPuffer.length >= 6) sendeStrich();
+}
+
+function ende(){
+  if(!malt) return;
+  malt = false;
+  if(strichPuffer.length > 1) sendeStrich();
+  strichPuffer = [];
+}
+
+async function sendeStrich(){
+  const punkte = [...strichPuffer];
+  strichPuffer = [punkte[punkte.length - 1]];
+  if(punkte.length < 2) return;
+  await sb.from('skr_strokes').insert({
+    runde: state.strokeRunde || 0,
+    data: {
+      punkte: punkte.map(p => [Math.round(p.x), Math.round(p.y)]),
+      farbe: radierer ? '#ffffff' : farbe,
+      dicke: radierer ? dicke * 3 : dicke,
+      zug: aktuellerZug
+    }
+  });
+}
+
+function hexZuRgb(hex){
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function fuelleFlaeche(startX, startY, hexFarbe){
+  startX = Math.round(startX); startY = Math.round(startY);
+  if(startX < 0 || startY < 0 || startX >= canvas.width || startY >= canvas.height) return;
+
+  const bild = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const px = bild.data;
+  const W = canvas.width, H = canvas.height;
+
+  const idx = (x, y) => (y * W + x) * 4;
+  const start = idx(startX, startY);
+
+  const zielR = px[start], zielG = px[start+1], zielB = px[start+2];
+  const [neuR, neuG, neuB] = hexZuRgb(hexFarbe);
+
+  if(zielR === neuR && zielG === neuG && zielB === neuB) return;
+
+  const TOL = 32;
+  const passt = (i) =>
+    Math.abs(px[i]   - zielR) <= TOL &&
+    Math.abs(px[i+1] - zielG) <= TOL &&
+    Math.abs(px[i+2] - zielB) <= TOL;
+
+  const stack = [[startX, startY]];
+  const gesehen = new Uint8Array(W * H);
+
+  while(stack.length){
+    const [x, y] = stack.pop();
+    if(x < 0 || y < 0 || x >= W || y >= H) continue;
+    const flach = y * W + x;
+    if(gesehen[flach]) continue;
+    const i = flach * 4;
+    if(!passt(i)) continue;
+
+    gesehen[flach] = 1;
+    px[i] = neuR; px[i+1] = neuG; px[i+2] = neuB; px[i+3] = 255;
+
+    stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+  }
+
+  ctx.putImageData(bild, 0, 0);
+}
+
+function malLinie(a, b, f, d){
+  ctx.strokeStyle = f;
+  ctx.lineWidth = d;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+}
+
+function malStrich(s){
+
+  if(s.typ === 'fuellung'){
+    fuelleFlaeche(s.x, s.y, s.farbe);
+    return;
+  }
+  const p = s.punkte;
+  if(!p || p.length < 2) return;
+  ctx.strokeStyle = s.farbe;
+  ctx.lineWidth = s.dicke;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p[0][0], p[0][1]);
+  for(let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+  ctx.stroke();
+}
+
+function leereLeinwand(){
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+leereLeinwand();
+
+canvas.addEventListener('mousedown', start);
+canvas.addEventListener('mousemove', bewegen);
+window.addEventListener('mouseup', ende);
+canvas.addEventListener('touchstart', start, {passive:false});
+canvas.addEventListener('touchmove', bewegen, {passive:false});
+window.addEventListener('touchend', ende);
+
+function werkzeugAnzeige(){
+  const eb = $('eraserBtn'), fb = $('fillBtn');
+  eb.style.background = radierer ? 'var(--accent)' : '';
+  eb.style.color      = radierer ? '#04120f' : '';
+  fb.style.background = fuellen ? 'var(--accent)' : '';
+  fb.style.color      = fuellen ? '#04120f' : '';
+  canvas.style.cursor = fuellen ? 'copy' : 'crosshair';
+}
+
+document.querySelectorAll('.swatch').forEach(sw => {
+  sw.onclick = () => {
+    farbe = sw.dataset.c;
+    radierer = false;
+    document.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
+    sw.classList.add('on');
+    werkzeugAnzeige();
+  };
+});
+(function(){
+  const picker = $('colorPicker');
+  if(picker) picker.oninput = () => {
+    farbe = picker.value;
+    radierer = false;
+    document.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
+    werkzeugAnzeige();
+  };
+})();
+document.querySelectorAll('.size').forEach(sz => {
+  sz.onclick = () => {
+    dicke = parseInt(sz.dataset.s);
+    document.querySelectorAll('.size').forEach(x => x.classList.remove('on'));
+    sz.classList.add('on');
+  };
+});
+$('eraserBtn').onclick = () => {
+  radierer = !radierer;
+  if(radierer) fuellen = false;
+  werkzeugAnzeige();
+};
+
+$('fillBtn').onclick = () => {
+  fuellen = !fuellen;
+  if(fuellen) radierer = false;
+  werkzeugAnzeige();
+};
+$('clearBtn').onclick = async () => {
+  if(!darfMalen()) return;
+  await sb.from('skr_strokes').delete().neq('id', 0);
+  eigeneZuege = [];
+  leereLeinwand();
+  letzteStrichId = 0;
+};
+
+$('undoBtn').onclick = async () => {
+  if(!darfMalen()) return;
+  if(!eigeneZuege.length) return;
+  const zug = eigeneZuege.pop();
+
+  const { data } = await sb.from('skr_strokes')
+    .select('id, data')
+    .eq('runde', state.strokeRunde || 0)
+    .order('id', { ascending: true });
+  if(!data) return;
+
+  const zuLoeschen = data.filter(r => r.data && r.data.zug === zug).map(r => r.id);
+  for(const id of zuLoeschen){
+    await sb.from('skr_strokes').delete().eq('id', id);
+  }
+
+  leereLeinwand();
+  const rest = data.filter(r => !zuLoeschen.includes(r.id));
+  rest.forEach(r => malStrich(r.data));
+  letzteStrichId = rest.length ? Math.max(...rest.map(r => r.id)) : 0;
+};
+
+async function holeStriche(){
+  if(!state || state.phase !== 'zeichnen') return;
+  const { data } = await sb.from('skr_strokes')
+    .select('id, data')
+    .eq('runde', state.strokeRunde || 0)
+    .gt('id', letzteStrichId)
+    .order('id', { ascending: true });
+  if(!data || !data.length) return;
+  data.forEach(row => {
+    if(state.zeichner !== myName) malStrich(row.data);
+    letzteStrichId = Math.max(letzteStrichId, row.id);
+  });
+}
+
+function zeige(){
+  const eingeloggt = !!myName && state && state.players && state.players[myName];
+  $('joinView').style.display  = eingeloggt ? 'none' : 'flex';
+  $('lobbyView').style.display = (eingeloggt && (state.phase === 'lobby' || state.phase === 'ende')) ? 'flex' : 'none';
+  $('gameView').style.display  = (eingeloggt && state.phase !== 'lobby' && state.phase !== 'ende') ? 'flex' : 'none';
+}
+
+function render(){
+  if(!state) return;
+  zeige();
+  if(!myName || !state.players[myName]) return;
+
+  const phase = state.phase;
+
+  if(phase === 'lobby' || phase === 'ende'){
+    const istHost = state.hostName === myName;
+    $('hostSettings').style.display = (istHost && phase === 'lobby') ? 'flex' : 'none';
+    $('lobbyHint').textContent = istHost
+      ? (phase === 'ende' ? 'Spiel vorbei. Du kannst neu starten.' : 'Du bist der Lobby-Leader.')
+      : 'Warte auf den Start durch ' + (state.hostName || '…');
+
+    if(phase === 'ende'){
+      $('hostSettings').style.display = istHost ? 'flex' : 'none';
+      $('startBtn').textContent = 'NEUES SPIEL';
+    }
+
+    $('lobbyPlayers').innerHTML = Object.entries(state.players)
+      .sort((a,b) => b[1].score - a[1].score)
+      .map(([n, p]) => {
+        const av = avatarFor(n);
+        return `<div class="lp">
+          ${av ? `<img src="${av}" alt="">` : ''}
+          <span>${n}</span>
+          ${phase === 'ende' ? `<span style="margin-left:auto;font-family:Anton;color:var(--accent);">${p.score}</span>` : ''}
+          ${state.hostName === n ? '<span class="host">LEADER</span>' : ''}
+        </div>`;
+      }).join('');
+    return;
+  }
+
+  const binZeichner = state.zeichner === myName;
+  const habRichtig = !!(state.players[myName] && state.players[myName].guessedAt);
+
+  $('roundLbl').textContent = `RUNDE ${state.runde}/${state.runden}`;
+  $('closeBtn').style.display = (state.hostName === myName) ? 'block' : 'none';
+
+  const ws = $('wordSlot');
+  ws.classList.remove('reveal');
+  if(phase === 'zeichnen'){
+    if(binZeichner || habRichtig){
+      ws.textContent = state.wort || '';
+      ws.classList.add('reveal');
+    } else {
+      ws.textContent = (state.wort || '').split('').map(c => c === ' ' ? '  ' : '_').join(' ');
+    }
+  } else if(phase === 'pause'){
+    ws.textContent = state.wort || '';
+    ws.classList.add('reveal');
+  } else {
+    ws.textContent = '';
+  }
+
+  $('tools').style.display = (binZeichner && phase === 'zeichnen') ? 'flex' : 'none';
+  canvas.classList.toggle('locked', !binZeichner);
+
+  const gi = $('guessInput');
+  gi.disabled = binZeichner || habRichtig || phase !== 'zeichnen';
+  gi.placeholder = binZeichner ? 'Du zeichnest…'
+                  : habRichtig ? 'Richtig! Warte auf die anderen…'
+                  : 'Deine Antwort…';
+
+  $('playersCol').innerHTML = Object.entries(state.players)
+    .sort((a,b) => b[1].score - a[1].score)
+    .map(([n, p]) => {
+      const av = avatarFor(n);
+      const zeichnet = state.zeichner === n;
+      const richtig = !!p.guessedAt;
+      const cls = ['p'];
+      if(zeichnet) cls.push('drawing');
+      else if(richtig) cls.push('guessed');
+      return `<div class="${cls.join(' ')}">
+        ${zeichnet ? `<span class="ka-badge-tr" style="right:auto;left:-8px;top:-8px;">${KA.star()}</span>` : ''}
+        ${av ? `<img src="${av}" alt="">` : ''}
+        <span class="nm">${n}</span>
+        <span class="sc">${p.score}</span>
+      </div>`;
+    }).join('');
+
+  const chatEl = $('chat');
+  chatEl.innerHTML = (state.chat || []).map(m => {
+    if(m.art === 'system') return `<div class="msg system">${m.text}</div>`;
+    if(m.art === 'correct') return `<div class="msg correct">${m.name} ${m.text}</div>`;
+    if(m.art === 'close')   return `<div class="msg close"><b>${m.name}:</b> ${m.text}</div>`;
+    return `<div class="msg"><b>${m.name}:</b> ${m.text}</div>`;
+  }).join('');
+  chatEl.scrollTop = chatEl.scrollHeight;
+
+  const ov = $('overlay');
+  if(phase === 'wortwahl'){
+    ov.style.display = 'flex';
+    if(binZeichner){
+      ov.innerHTML = `<h3>WÄHLE EIN WORT</h3>
+        <div class="wordpick">
+          ${(state.wortAuswahl||[]).map(w => `<button data-w="${w}">${w}</button>`).join('')}
+        </div>`;
+      ov.querySelectorAll('button').forEach(b => {
+        b.onclick = () => wortGewaehlt(b.dataset.w);
+      });
+    } else {
+      ov.innerHTML = `<h3>${state.zeichner}</h3><div class="sub">wählt gerade ein Wort…</div>`;
+    }
+  } else if(phase === 'pause'){
+    ov.style.display = 'flex';
+    ov.innerHTML = `<div class="sub">Das Wort war</div>
+                    <div class="big-word">${state.wort || ''}</div>
+                    <div class="sub">Gleich geht es weiter…</div>`;
+  } else {
+    ov.style.display = 'none';
+  }
+
+  const turnKey = `${state.strokeRunde}-${state.zeichner}`;
+  if(turnKey !== lastTurnKey){
+    lastTurnKey = turnKey;
+    leereLeinwand();
+    letzteStrichId = 0;
+    eigeneZuege = [];
+  }
+}
+
+function tickTimer(){
+  requestAnimationFrame(tickTimer);
+  if(!state || state.phase !== 'zeichnen' || !state.startAt){
+    $('timer').textContent = '–';
+    $('timeFill').style.width = '0%';
+    return;
+  }
+  const rest = state.sekunden - (Date.now() - state.startAt) / 1000;
+  const sek = Math.max(0, Math.ceil(rest));
+  $('timer').textContent = sek;
+  $('timer').classList.toggle('low', sek <= 10);
+  $('timeFill').style.width = Math.max(0, Math.min(100, rest / state.sekunden * 100)) + '%';
+
+  if(rest <= 0 && state.zeichner === myName && state.phase === 'zeichnen'){
+    zugBeenden(state);
+  }
+}
+tickTimer();
+
+async function tick(){
+  state = await ladeState();
+  render();
+  await holeStriche();
+}
+tick();
+setInterval(tick, 1200);
+
+setInterval(holeStriche, 350);
+
+sb.channel('skr_sync')
+  .on('postgres_changes', { event:'*', schema:'public', table:'skr_state' }, () => tick())
+  .on('postgres_changes', { event:'INSERT', schema:'public', table:'skr_strokes' }, () => holeStriche())
+  .subscribe();
+</script>
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../bestenliste.js"></script>
+<script src="../spiel-beenden.js"></script>
+<script>
+  SpielBeenden.init({
+    format: 'skribbl',
+    sichtbar: function () {
+      return state && state.hostName && myName && state.hostName === myName;
+    },
+    sammle: async function () {
+      const players = (state && state.players) || {};
+      return Object.entries(players).map(function (e) {
+        const v = e[1];
+        return { spieler: e[0], punkte: (v && v.score) || 0 };
+      });
+    }
+  });
+</script>
+</body>
+</html>

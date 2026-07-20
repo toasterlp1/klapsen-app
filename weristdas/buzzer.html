@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Wer ist das? — Buzzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#12172a; --panel-border:#232b45;
+    --ink:#eef1f8; --muted:#6b7488; --accent:#00e5c7; --warn:#ffd166; --bad:#ff3860;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:radial-gradient(ellipse at 50% 0%, #131b33 0%, var(--bg) 65%);
+    color:var(--ink);font-family:'Inter',sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .wrap{width:100%;max-width:420px;text-align:center;}
+  h1{font-family:'Anton',sans-serif;letter-spacing:2px;font-size:26px;margin-bottom:24px;text-shadow:0 0 18px rgba(0,229,199,.25);}
+  input[type=text], select{
+    width:100%;background:#0d1220;border:1px solid var(--panel-border);color:var(--ink);
+    padding:14px;border-radius:12px;font-size:16px;margin-bottom:10px;text-align:center;
+    transition:border-color .25s var(--ease);
+  }
+  input[type=text]:focus, select:focus{outline:none;border-color:var(--accent);}
+  button.join{
+    width:100%;padding:14px;border:none;border-radius:12px;background:var(--accent);
+    color:#04120f;font-weight:900;font-size:16px;cursor:pointer;transition:transform .15s var(--ease);
+  }
+  button.join:active{transform:scale(.97);}
+  .buzz-btn{
+    width:260px;height:260px;border-radius:50%;border:none;
+    background:radial-gradient(circle at 35% 30%, #ff5470, var(--bad));
+    box-shadow:0 0 50px rgba(255,56,96,.5);
+    color:#fff;font-family:'Anton',sans-serif;font-size:40px;letter-spacing:2px;
+    cursor:pointer;transition:transform .12s var(--ease), box-shadow .3s var(--ease), background .3s var(--ease);
+    animation:buzzReady 2s ease-in-out infinite;
+  }
+  @keyframes buzzReady{
+    0%,100%{box-shadow:0 0 50px rgba(255,56,96,.5);}
+    50%{box-shadow:0 0 70px rgba(255,56,96,.75);}
+  }
+  .buzz-btn:active{transform:scale(.94);}
+  .buzz-btn:disabled{
+    background:#1b2138;box-shadow:none;color:var(--muted);cursor:not-allowed;animation:none;
+  }
+  .status{margin-top:22px;font-size:15px;color:var(--muted);}
+  .status b{color:var(--ink);}
+  .out{color:var(--bad);}
+  .active{color:var(--warn);}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+<div class="wrap" id="joinView">
+  <h1>WER IST DAS?</h1>
+  <select id="nameInput"><option value="">— wähle deinen Namen —</option></select>
+  <button class="join" id="joinBtn">Beitreten</button>
+</div>
+
+<div class="wrap" id="gameView" style="display:none;">
+  <h1 id="greeting"></h1>
+  <button class="buzz-btn" id="buzzBtn">BUZZ</button>
+  <div class="status" id="status">Warte auf Bild…</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let myName = localStorage.getItem('wid_name') || '';
+let state = { players:{}, imageIndex:null, solved:false, buzzQueue:[], buzzedOut:[] };
+
+const joinView = document.getElementById('joinView');
+const gameView = document.getElementById('gameView');
+const buzzBtn = document.getElementById('buzzBtn');
+const statusEl = document.getElementById('status');
+
+function showGame(){
+  joinView.style.display='none';
+  gameView.style.display='block';
+  document.getElementById('greeting').textContent = 'Hi, ' + myName;
+}
+
+function populateNameSelect(){
+  const sel = document.getElementById('nameInput');
+  const names = Object.keys(typeof AVATARE!=='undefined' ? AVATARE : {});
+  sel.innerHTML = '<option value="">— wähle deinen Namen —</option>' +
+    names.map(n=>`<option value="${n}" ${n===myName?'selected':''}>${n}</option>`).join('');
+}
+populateNameSelect();
+
+if(myName) showGame();
+
+document.getElementById('joinBtn').onclick = async ()=>{
+  const val = document.getElementById('nameInput').value.trim();
+  if(!val) return;
+  myName = val;
+  localStorage.setItem('wid_name', myName);
+  const { data } = await sb.from('wid_state').select('state').eq('id',1).single();
+  const s = data?.state || {};
+  s.players = s.players || {};
+  if(s.players[myName]==null) s.players[myName] = 0;
+  await sb.from('wid_state').update({ state: s }).eq('id',1);
+  showGame();
+};
+document.getElementById('nameInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('joinBtn').click();
+});
+
+async function loadState(){
+  const { data } = await sb.from('wid_state').select('state').eq('id',1).single();
+  state = data?.state || state;
+  render();
+}
+loadState();
+setInterval(loadState, 2000);
+
+sb.channel('wid_state_channel_buzz')
+  .on('postgres_changes', { event:'*', schema:'public', table:'wid_state' }, payload=>{
+    state = payload.new.state || state;
+    render();
+  }).subscribe();
+
+function render(){
+  const hasImage = state.imageIndex!=null;
+  const alreadyBuzzed = state.buzzQueue.includes(myName);
+  const isOut = state.buzzedOut.includes(myName);
+  const canBuzz = hasImage && !state.solved && !alreadyBuzzed;
+
+  buzzBtn.disabled = !canBuzz;
+  if(!hasImage){
+    statusEl.innerHTML = 'Warte auf Bild…';
+  } else if(state.solved){
+    statusEl.innerHTML = 'Runde vorbei — nächstes Bild kommt gleich.';
+  } else if(isOut){
+    statusEl.innerHTML = '<span class="out">Falsch geantwortet — warte auf nächste Runde.</span>';
+  } else if(alreadyBuzzed){
+    const active = state.buzzQueue.find(n=>!state.buzzedOut.includes(n));
+    statusEl.innerHTML = active===myName
+      ? '<span class="active">Du bist dran! Sag deine Antwort laut.</span>'
+      : 'Gebuzzert — warte, ob du dran kommst.';
+  } else {
+    statusEl.innerHTML = 'Buzzer ist offen!';
+  }
+}
+
+async function doBuzz(){
+  if(buzzBtn.disabled) return;
+  const { data } = await sb.from('wid_state').select('state').eq('id',1).single();
+  const s = data?.state || {};
+  if(s.imageIndex==null || s.solved) return;
+  s.buzzQueue = s.buzzQueue || [];
+  if(!s.buzzQueue.includes(myName)) s.buzzQueue.push(myName);
+
+  if(s.frozenAt == null) s.frozenAt = Date.now();
+  await sb.from('wid_state').update({ state: s }).eq('id',1);
+}
+
+buzzBtn.addEventListener('click', doBuzz);
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space' && gameView.style.display!=='none'){
+    e.preventDefault();
+    doBuzz();
+  }
+});
+</script>
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../buzzer-fx.js"></script>
+</body>
+</html>

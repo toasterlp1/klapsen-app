@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Stadt-Land-Fluss</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<script src="./kategorien.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --bg2:#0e1424; --panel:#131c30; --panel2:#182339; --border:#243149;
+    --ink:#eef1f8; --muted:#8794b0; --accent:#38e1b0; --accent2:#2bb894;
+    --gold:#f5c542; --blue:#4d9fff; --violet:#a855f7; --bad:#ff4d6d; --good:#3ddc84;
+    --ease:cubic-bezier(.22,.9,.32,1); --ease-out:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{min-height:100%;}
+  body{
+    background:radial-gradient(ellipse at 50% -10%, #14213b 0%, var(--bg) 60%);
+    color:var(--ink);font-family:'Inter',sans-serif;
+    padding:max(18px,env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom));
+    min-height:100vh;overflow-x:hidden;
+  }
+  .wrap{max-width:760px;margin:0 auto;position:relative;z-index:2;}
+
+  /* Kopf */
+  .kopf{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;padding-left:52px;}
+  .kopf h1{font-family:'Anton',sans-serif;font-size:clamp(26px,6vw,40px);letter-spacing:1px;line-height:1;}
+  .kopf h1 span{color:var(--accent);}
+  .rundeninfo{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:800;text-align:right;}
+  .rundeninfo b{color:var(--ink);display:block;font-size:15px;}
+
+  .card{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;animation:riseIn .4s var(--ease-out);}
+  .card-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:14px;}
+
+  button{font-family:'Inter',sans-serif;font-weight:800;border:none;border-radius:12px;padding:14px 18px;cursor:pointer;font-size:15px;transition:transform .12s var(--ease),filter .2s,opacity .2s;color:#fff;}
+  button:active{transform:scale(.96);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#052018;}
+  .btn-good{background:linear-gradient(135deg,var(--good),#2bbf72);color:#04120c;}
+  .btn-bad{background:linear-gradient(135deg,var(--bad),#e0344f);}
+  .btn-ghost{background:#0d1424;border:1px solid var(--border);color:var(--ink);}
+  .btn-gold{background:linear-gradient(135deg,var(--gold),#e0ad2a);color:#241900;}
+  .btn-block{width:100%;}
+  .btn-lg{padding:17px;font-size:17px;}
+
+  /* Namensauswahl / Join */
+  .join-av-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;margin-bottom:16px;}
+  .join-av{display:flex;flex-direction:column;align-items:center;gap:6px;background:#0d1424;border:2px solid var(--border);border-radius:14px;padding:10px 6px;cursor:pointer;transition:border-color .2s var(--ease),transform .2s var(--ease);}
+  .join-av:active{transform:scale(.95);}
+  .join-av.sel{border-color:var(--accent);box-shadow:0 0 18px -6px var(--accent);}
+  .join-av img{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#1b2138;}
+  .join-av .fb{width:46px;height:46px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:20px;color:var(--muted);}
+  .join-av .nm{font-size:12px;font-weight:700;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+
+  /* Lobby-Spielerliste */
+  .lobby-players{display:flex;flex-direction:column;gap:8px;}
+  .lp-row{display:flex;align-items:center;gap:12px;background:#0d1424;border:1px solid var(--border);border-radius:12px;padding:9px 13px;animation:riseIn .3s var(--ease-out);}
+  .lp-row .av{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#1b2138;flex-shrink:0;}
+  .lp-row .fb{width:38px;height:38px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:17px;color:var(--muted);flex-shrink:0;}
+  .lp-row .nm{font-weight:700;font-size:15px;flex:1;}
+  .lp-row .leader-badge{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--gold);background:rgba(245,197,66,.14);padding:4px 9px;border-radius:7px;}
+  .lp-row .du-badge{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--accent);background:rgba(56,225,176,.14);padding:4px 9px;border-radius:7px;}
+
+  /* Kategorie-Auswahl (Leader) */
+  .kat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:8px;}
+  .kat-chip{background:#0d1424;border:2px solid var(--border);border-radius:11px;padding:11px 12px;cursor:pointer;font-size:13px;font-weight:700;text-align:center;transition:border-color .18s var(--ease),background .18s var(--ease);user-select:none;}
+  .kat-chip.on{border-color:var(--accent);background:rgba(56,225,176,.1);color:var(--accent);}
+
+  .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .setting-row .lab{font-size:14px;font-weight:700;}
+  .timer-input{display:flex;align-items:center;gap:8px;}
+  .timer-input input{width:74px;background:#0d1424;border:1px solid var(--border);color:var(--ink);padding:10px;border-radius:10px;font-size:15px;text-align:center;font-family:inherit;font-weight:700;}
+  .timer-input .unit{color:var(--muted);font-size:13px;}
+
+  /* Timer-Balken (wie Skribbl) */
+  .timer-bar-wrap{position:sticky;top:0;z-index:20;padding:8px 0 12px;background:linear-gradient(180deg,var(--bg) 70%,transparent);margin-bottom:8px;}
+  .timer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-left:52px;}
+  .buchstabe-badge{display:flex;align-items:center;gap:10px;}
+  .buchstabe-badge .kreis{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:30px;color:#052018;box-shadow:0 6px 18px -6px var(--accent);}
+  .buchstabe-badge .txt{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:800;}
+  .buchstabe-badge .txt b{display:block;color:var(--ink);font-size:15px;letter-spacing:0;text-transform:none;}
+  .timer-zeit{font-family:'Anton',sans-serif;font-size:32px;line-height:1;transition:color .3s;}
+  .timer-zeit.warn{color:var(--gold);}
+  .timer-zeit.danger{color:var(--bad);animation:pulse .6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .timer-bar{height:10px;border-radius:6px;background:#0d1424;overflow:hidden;border:1px solid var(--border);}
+  .timer-bar .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px;transition:width .25s linear,background .4s;}
+  .timer-bar .fill.warn{background:linear-gradient(90deg,var(--gold),#e0ad2a);}
+  .timer-bar .fill.danger{background:linear-gradient(90deg,var(--bad),#e0344f);}
+
+  /* Eingabefelder Runde */
+  .antwort-liste{display:flex;flex-direction:column;gap:10px;}
+  .antwort-feld{display:flex;flex-direction:column;gap:5px;}
+  .antwort-feld .kat-lab{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.5px;padding-left:4px;}
+  .antwort-feld input{width:100%;background:#0d1424;border:1.5px solid var(--border);color:var(--ink);padding:14px;border-radius:12px;font-size:16px;font-family:inherit;transition:border-color .2s var(--ease);}
+  .antwort-feld input:focus{outline:none;border-color:var(--accent);}
+  .antwort-feld input:disabled{opacity:.6;background:#0a1120;}
+
+  .stopp-btn{margin-top:16px;}
+
+  /* Auflösung */
+  .reveal-kopf{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+  .reveal-kopf .av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b2138;flex-shrink:0;border:2px solid var(--accent);}
+  .reveal-kopf .fb{width:56px;height:56px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:24px;color:var(--muted);flex-shrink:0;border:2px solid var(--border);}
+  .reveal-kopf .who .nm{font-family:'Anton',sans-serif;font-size:24px;}
+  .reveal-kopf .who .sub{font-size:12px;color:var(--muted);}
+  .reveal-rows{display:flex;flex-direction:column;gap:9px;margin-top:14px;}
+  .reveal-row{background:#0d1424;border:1px solid var(--border);border-radius:13px;padding:12px 14px;animation:riseIn .3s var(--ease-out);}
+  .reveal-row .rr-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .reveal-row .rr-kat{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+  .reveal-row .rr-pts{font-family:'Anton',sans-serif;font-size:20px;min-width:34px;text-align:right;}
+  .reveal-row .rr-pts.p10{color:var(--good);}
+  .reveal-row .rr-pts.p5{color:var(--gold);}
+  .reveal-row .rr-pts.p0{color:var(--muted);}
+  .reveal-row .rr-ans{font-size:19px;font-weight:700;margin-top:3px;word-break:break-word;}
+  .reveal-row .rr-ans.leer{color:var(--muted);font-style:italic;font-weight:400;font-size:15px;}
+  .reveal-row .rr-dup{font-size:11px;color:var(--gold);font-weight:700;margin-top:3px;}
+  /* Leader-Wertungsknöpfe */
+  .rr-controls{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .rr-controls button{padding:8px 12px;font-size:12px;border-radius:9px;flex:1;min-width:70px;}
+  .rr-controls .set10{background:rgba(61,220,132,.15);color:var(--good);border:1px solid rgba(61,220,132,.4);}
+  .rr-controls .set10.on{background:var(--good);color:#04120c;}
+  .rr-controls .set5{background:rgba(245,197,66,.15);color:var(--gold);border:1px solid rgba(245,197,66,.4);}
+  .rr-controls .set5.on{background:var(--gold);color:#241900;}
+  .rr-controls .set0{background:rgba(255,77,109,.15);color:var(--bad);border:1px solid rgba(255,77,109,.4);}
+  .rr-controls .set0.on{background:var(--bad);color:#fff;}
+
+  .reveal-nav{display:flex;gap:10px;margin-top:16px;}
+  .reveal-fortschritt{display:flex;gap:5px;justify-content:center;margin:14px 0 4px;}
+  .reveal-fortschritt .dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s;}
+  .reveal-fortschritt .dot.done{background:var(--accent);}
+  .reveal-fortschritt .dot.active{background:var(--gold);transform:scale(1.3);}
+
+  /* Zwischenstand / Scoreboard */
+  .score-liste{display:flex;flex-direction:column;gap:8px;}
+  .score-row{display:flex;align-items:center;gap:12px;background:#0d1424;border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:transform .3s var(--ease);}
+  .score-row .rank{font-family:'Anton',sans-serif;font-size:18px;color:var(--muted);min-width:26px;}
+  .score-row.gold .rank{color:var(--gold);}
+  .score-row .av{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#1b2138;flex-shrink:0;}
+  .score-row .fb{width:34px;height:34px;border-radius:50%;background:#1b2138;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--muted);flex-shrink:0;}
+  .score-row .nm{flex:1;font-weight:700;font-size:15px;}
+  .score-row .pts{font-family:'Anton',sans-serif;font-size:22px;color:var(--accent);}
+  .score-row .rundenpts{font-size:12px;color:var(--good);font-weight:700;margin-left:6px;}
+
+  .hint{font-size:13px;color:var(--muted);line-height:1.5;margin-top:10px;text-align:center;}
+  .warte-box{text-align:center;padding:30px 20px;}
+  .warte-box .spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .warte-box .txt{color:var(--muted);font-size:15px;}
+
+  @keyframes riseIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms !important;}}
+
+  /* Handy-Feinschliff */
+  @media (max-width:560px){
+    body{padding:max(14px,env(safe-area-inset-top)) 10px calc(16px + env(safe-area-inset-bottom));}
+    .card{padding:15px;border-radius:15px;}
+    .kat-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));}
+    .join-av-grid{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));}
+    .reveal-nav{flex-direction:column;}
+    .rr-controls button{min-width:60px;}
+  }
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="warte-box"><div class="spinner"></div><div class="txt">Lädt…</div></div>
+</div>
+
+<script src="../zurueck.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../sound-toggle.js"></script>
+<script src="../bestenliste.js"></script>
+<script src="../spiel-beenden.js"></script>
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const app = document.getElementById('app');
+let myName = localStorage.getItem('slf_name') || '';
+let selName = '';
+
+const LEER = {
+  phase: 'lobby', leader: null, spieler: [], kategorien: SLF_STANDARD.slice(),
+  timerLen: 120, runde: 0, buchstabe: null, startAt: null, stoppBy: null,
+  antworten: {}, revealIndex: 0, wertung: {}, gesamtpunkte: {}, rundeVerbucht: false
+};
+let state = JSON.parse(JSON.stringify(LEER));
+let localAntworten = {};
+let tickHandle = null;
+
+function bild(name, cls, fbCls){
+  const url = (typeof avatarFor === 'function') ? avatarFor(name) : null;
+  if(url) return '<img class="'+cls+'" src="'+url+'" alt="">';
+  return '<div class="'+fbCls+'">'+(name?name[0].toUpperCase():'?')+'</div>';
+}
+function istLeader(){ return myName && state.leader === myName; }
+
+function normalisiere(s){
+  return String(s||'')
+    .toLowerCase().trim()
+    .replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]/g,'');
+}
+function levenshtein(a,b){
+  // Damerau-Levenshtein: erkennt auch Buchstabendreher (z.B. Madrid<->Madird)
+  const m=a.length,n=b.length;
+  if(!m) return n; if(!n) return m;
+  const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){
+    const c=a[i-1]===b[j-1]?0:1;
+    d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+c);
+    if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]){
+      d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1); // Transposition
+    }
+  }
+  return d[m][n];
+}
+function istGleich(a,b){
+  const na=normalisiere(a), nb=normalisiere(b);
+  if(!na||!nb) return false;
+  if(na===nb) return true;
+  const dist=levenshtein(na,nb);
+  const minLen=Math.min(na.length,nb.length);
+  // kurze Woerter (<5): nur exakt. Mittel (5-7): 1 Fehler. Lang (8+): 2 Fehler.
+  if(minLen>=8) return dist<=2;
+  if(minLen>=5) return dist<=1;
+  return false;
+}
+
+function berechneAutoWertung(){
+  const kat = state.kategorien;
+  const spieler = state.spieler;
+  const w = {};
+  spieler.forEach(sp => { w[sp] = {}; });
+  kat.forEach(k => {
+    const eintraege = spieler.map(sp => ({ sp, ans: (state.antworten[sp]||{})[k] || '' }));
+    eintraege.forEach(e => {
+      if(!normalisiere(e.ans)){ w[e.sp][k] = 0; return; }
+      const gleiche = eintraege.filter(o => normalisiere(o.ans) && istGleich(o.ans, e.ans));
+      w[e.sp][k] = gleiche.length > 1 ? 5 : 10;
+    });
+  });
+  return w;
+}
+
+async function loadState(){
+  const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+  state = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+  render();
+}
+async function saveState(){
+  await sb.from('slf_state').update({ state }).eq('id',1);
+}
+loadState();
+setInterval(loadState, 2500);
+
+sb.channel('slf_state_channel')
+  .on('postgres_changes', { event:'*', schema:'public', table:'slf_state' }, payload=>{
+    state = Object.assign(JSON.parse(JSON.stringify(LEER)), payload.new.state||{});
+    render();
+  }).subscribe();
+
+let aktuellePhaseGebaut = null;  // welche Ansicht ist gerade im DOM
+function render(){
+  if(!myName){ if(aktuellePhaseGebaut!=='join'){ renderJoin(); aktuellePhaseGebaut='join'; } return; }
+
+  // In der Running-Phase NICHT neu bauen wenn schon aufgebaut —
+  // sonst verliert man beim Tippen den Fokus/Text. Nur Sperr-Status aktualisieren.
+  if(state.phase==='running'){
+    const runSig = 'running|'+state.runde+'|'+state.buchstabe+'|'+state.kategorien.join(',');
+    if(aktuellePhaseGebaut==='running' && runSig===runningSignatur){
+      aktualisiereRunningStatus();
+      return;
+    }
+    renderRunning();
+    runningSignatur=runSig;
+    aktuellePhaseGebaut='running';
+    return;
+  }
+
+  // Reveal: nur neu bauen wenn sich Spieler-Index oder Wertung geändert hat
+  if(state.phase==='reveal'){
+    const sig = 'reveal|'+state.revealIndex+'|'+JSON.stringify(state.wertung||{})+'|'+JSON.stringify(state.antworten||{});
+    if(sig!==revealSignatur){ renderReveal(); revealSignatur=sig; aktuellePhaseGebaut='reveal'; }
+    return;
+  }
+
+  if(state.phase==='lobby'){
+    const sig = 'lobby|'+state.spieler.join(',')+'|'+state.leader+'|'+state.kategorien.join(',')+'|'+state.timerLen+'|'+(istLeader()?'L':'P');
+    if(sig!==lobbySignatur){ renderLobby(); lobbySignatur=sig; aktuellePhaseGebaut='lobby'; }
+    return;
+  }
+  if(state.phase==='done'){ renderDone(); aktuellePhaseGebaut='done'; }
+}
+let revealSignatur='', lobbySignatur='', runningSignatur='';
+
+// Aktualisiert in der Running-Phase nur Timer-Sperre, ohne Inputs neu zu bauen
+function aktualisiereRunningStatus(){
+  const abgelaufen = istRundeVorbei();
+  if(abgelaufen){
+    document.querySelectorAll('input[data-kat]').forEach(i=>{ i.disabled=true; });
+    const sbtn=document.getElementById('stoppBtn'); if(sbtn) sbtn.disabled=true;
+  }
+  // Wenn Phase gewechselt hat (jemand anders hat STOPP gedrückt), baut render() eh neu,
+  // weil aktuellePhaseGebaut dann nicht mehr 'running' entspricht — das passiert beim nächsten Zustand.
+}
+
+function renderJoin(){
+  const namen = Object.keys(typeof AVATARE!=='undefined' ? AVATARE : {});
+  app.innerHTML = `
+    <div class="kopf"><h1>Stadt·Land·<span>Fluss</span></h1></div>
+    <div class="card">
+      <div class="card-label">Wer bist du?</div>
+      <div class="join-av-grid" id="joinGrid">
+        ${namen.map(n=>`
+          <div class="join-av ${n===selName?'sel':''}" data-n="${n}">
+            ${bild(n,'','fb')}<div class="nm">${n}</div>
+          </div>`).join('')}
+      </div>
+      <button class="btn-primary btn-block btn-lg" id="joinBtn" ${selName?'':'disabled'}>Beitreten</button>
+    </div>`;
+  app.querySelectorAll('.join-av').forEach(el=>{
+    el.onclick = ()=>{ selName = el.dataset.n; renderJoin(); };
+  });
+  document.getElementById('joinBtn').onclick = beitreten;
+}
+
+async function beitreten(){
+  if(!selName) return;
+  myName = selName;
+  localStorage.setItem('slf_name', myName);
+  const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+  let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+  if(!s.spieler.includes(myName)) s.spieler.push(myName);
+  if(!s.leader) s.leader = myName;
+  if(s.gesamtpunkte[myName]==null) s.gesamtpunkte[myName]=0;
+  state = s;
+  await saveState();
+  render();
+}
+
+function renderLobby(){
+  const anzahl = state.spieler.length;
+  const leaderView = istLeader();
+  app.innerHTML = `
+    <div class="kopf">
+      <h1>Stadt·Land·<span>Fluss</span></h1>
+      <div class="rundeninfo">Lobby<b>${anzahl} Spieler</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Im Raum</div>
+      <div class="lobby-players">
+        ${state.spieler.map(n=>`
+          <div class="lp-row">
+            ${bild(n,'av','fb')}
+            <div class="nm">${n}</div>
+            ${n===state.leader?'<span class="leader-badge">LEADER</span>':''}
+            ${n===myName?'<span class="du-badge">DU</span>':''}
+          </div>`).join('')}
+      </div>
+      <button class="btn-ghost btn-block" id="verlassenBtn" style="margin-top:12px;">Namen wechseln / Raum verlassen</button>
+    </div>
+
+    ${leaderView ? `
+    <div class="card">
+      <div class="card-label">Kategorien wählen</div>
+      <div class="kat-grid" id="katGrid">
+        ${SLF_KATEGORIEN.map(k=>`<div class="kat-chip ${state.kategorien.includes(k)?'on':''}" data-k="${k}">${k}</div>`).join('')}
+      </div>
+      <div class="hint">${state.kategorien.length} Kategorien ausgewählt</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Einstellungen</div>
+      <div class="setting-row">
+        <span class="lab">Zeit pro Runde</span>
+        <div class="timer-input">
+          <input type="number" id="timerLen" min="15" max="600" step="5" value="${state.timerLen}">
+          <span class="unit">Sekunden</span>
+        </div>
+      </div>
+      <button class="btn-primary btn-block btn-lg" id="startBtn" style="margin-top:8px;" ${state.kategorien.length?'':'disabled'}>Spiel starten</button>
+    </div>
+    ` : `
+    <div class="card">
+      <div class="warte-box">
+        <div class="spinner"></div>
+        <div class="txt"><b>${state.leader||'Der Leader'}</b> stellt gerade das Spiel ein…<br>Gleich geht's los!</div>
+      </div>
+    </div>
+    `}
+  `;
+
+  if(leaderView){
+    app.querySelectorAll('.kat-chip').forEach(el=>{
+      el.onclick = async ()=>{
+        const k = el.dataset.k;
+        if(state.kategorien.includes(k)) state.kategorien = state.kategorien.filter(x=>x!==k);
+        else state.kategorien.push(k);
+        await saveState();
+      };
+    });
+    const timerInput = document.getElementById('timerLen');
+    timerInput.onchange = async ()=>{
+      let v = parseInt(timerInput.value,10);
+      if(isNaN(v)||v<15) v=15; if(v>600) v=600;
+      state.timerLen = v;
+      await saveState();
+    };
+    document.getElementById('startBtn').onclick = starteRunde;
+  }
+
+  const verlassenBtn = document.getElementById('verlassenBtn');
+  if(verlassenBtn){
+    verlassenBtn.onclick = async ()=>{
+      // frische Kopie holen, mich rausnehmen
+      const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+      let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+      s.spieler = (s.spieler||[]).filter(n=>n!==myName);
+      // war ich Leader? -> Leader an nächsten übergeben
+      if(s.leader===myName){ s.leader = s.spieler[0] || null; }
+      delete (s.gesamtpunkte||{})[myName];
+      state = s;
+      await saveState();
+      // lokal zurück zur Namensauswahl
+      myName = '';
+      selName = '';
+      localStorage.removeItem('slf_name');
+      aktuellePhaseGebaut = null; lobbySignatur='';
+      render();
+    };
+  }
+}
+
+const ALPHABET = "ABCDEFGHIJKLMNOPRSTUVW";
+async function starteRunde(){
+  if(!state.kategorien.length) return;
+  state.phase = 'running';
+  state.runde = (state.runde||0) + 1;
+  state.buchstabe = ALPHABET[Math.floor(Math.random()*ALPHABET.length)];
+  state.startAt = Date.now();
+  state.stoppBy = null;
+  state.antworten = {};
+  state.revealIndex = 0;
+  state.wertung = {};
+  state.rundeVerbucht = false;
+  localAntworten = {};
+  await saveState();
+}
+
+function renderRunning(){
+  const kat = state.kategorien;
+  const abgelaufen = istRundeVorbei();
+
+  app.innerHTML = `
+    <div class="timer-bar-wrap">
+      <div class="timer-head">
+        <div class="buchstabe-badge">
+          <div class="kreis">${state.buchstabe||'?'}</div>
+          <div class="txt">Buchstabe<b>Runde ${state.runde}</b></div>
+        </div>
+        <div class="timer-zeit" id="timerZeit">--</div>
+      </div>
+      <div class="timer-bar"><div class="fill" id="timerFill" style="width:100%"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Deine Antworten mit „${state.buchstabe}“</div>
+      <div class="antwort-liste" id="antwortListe">
+        ${kat.map((k)=>`
+          <div class="antwort-feld">
+            <span class="kat-lab">${k}</span>
+            <input type="text" data-kat="${escapeHtml(k)}" placeholder="${escapeHtml(k)} mit ${state.buchstabe}…"
+              value="${escapeHtml(localAntworten[k]||'')}"
+              autocomplete="off" autocapitalize="words" ${abgelaufen?'disabled':''}>
+          </div>`).join('')}
+      </div>
+      <button class="btn-bad btn-block btn-lg stopp-btn" id="stoppBtn" ${abgelaufen?'disabled':''}>STOPP — Ich bin fertig!</button>
+      <div class="hint">Wenn du STOPP drückst oder die Zeit abläuft, kann niemand mehr schreiben.</div>
+      ${istLeader() ? '<button class="btn-ghost btn-block" id="notLobby" style="margin-top:12px;font-size:13px;">Runde abbrechen → zurück zur Lobby</button>' : ''}
+    </div>
+  `;
+
+  app.querySelectorAll('input[data-kat]').forEach(inp=>{
+    inp.oninput = ()=>{
+      localAntworten[inp.dataset.kat] = inp.value;
+      queueAntwortSpeichern();
+    };
+  });
+  document.getElementById('stoppBtn').onclick = ()=>stopp(myName);
+  const notLobby = document.getElementById('notLobby');
+  if(notLobby) notLobby.onclick = zurueckZurLobby;
+
+  startTick();
+}
+
+let speicherTimeout = null;
+function queueAntwortSpeichern(){
+  if(speicherTimeout) clearTimeout(speicherTimeout);
+  speicherTimeout = setTimeout(async ()=>{
+    const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+    let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+    if(s.phase!=='running') return;
+    s.antworten = s.antworten || {};
+    s.antworten[myName] = Object.assign({}, localAntworten);
+    state = s;
+    await saveState();
+  }, 500);
+}
+
+function istRundeVorbei(){
+  if(state.stoppBy) return true;
+  if(state.startAt && state.timerLen){
+    return (Date.now() - state.startAt) >= state.timerLen*1000;
+  }
+  return false;
+}
+
+async function stopp(wer){
+  const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+  let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+  if(s.phase!=='running' || s.stoppBy) return;
+  s.antworten = s.antworten || {};
+  s.antworten[myName] = Object.assign({}, localAntworten);
+  s.stoppBy = wer;
+  s.phase = 'reveal';
+  s.revealIndex = 0;
+  s.wertung = {};
+  state = s;
+  await saveState();
+}
+
+function startTick(){
+  stopTick();
+  function frame(){
+    if(state.phase!=='running'){ stopTick(); return; }
+    const zeitEl = document.getElementById('timerZeit');
+    const fillEl = document.getElementById('timerFill');
+    if(!zeitEl||!fillEl){ stopTick(); return; }
+    const gesamt = state.timerLen*1000;
+    const rest = Math.max(0, gesamt - (Date.now() - state.startAt));
+    const sek = Math.ceil(rest/1000);
+    zeitEl.textContent = sek+'s';
+    const anteil = rest/gesamt;
+    fillEl.style.width = (anteil*100)+'%';
+    const warn = anteil<=0.33, danger = anteil<=0.12;
+    zeitEl.classList.toggle('warn', warn && !danger);
+    zeitEl.classList.toggle('danger', danger);
+    fillEl.classList.toggle('warn', warn && !danger);
+    fillEl.classList.toggle('danger', danger);
+
+    if(rest<=0){
+      if(!state.stoppBy && istLeaderOrFirst()){ zeitAbgelaufen(); }
+      app.querySelectorAll('input[data-kat]').forEach(i=>i.disabled=true);
+      const sbtn=document.getElementById('stoppBtn'); if(sbtn) sbtn.disabled=true;
+      stopTick();
+      return;
+    }
+    tickHandle = requestAnimationFrame(frame);
+  }
+  tickHandle = requestAnimationFrame(frame);
+}
+function stopTick(){ if(tickHandle){ cancelAnimationFrame(tickHandle); tickHandle=null; } }
+function istLeaderOrFirst(){
+  return istLeader() || (state.spieler[0]===myName);
+}
+
+async function zeitAbgelaufen(){
+  const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+  let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+  if(s.phase!=='running' || s.stoppBy) return;
+  s.antworten = s.antworten || {};
+  if(localAntworten && Object.keys(localAntworten).length) s.antworten[myName] = Object.assign({}, localAntworten);
+  s.stoppBy = null;
+  s.phase = 'reveal';
+  s.revealIndex = 0;
+  state = s;
+  await saveState();
+}
+
+function revealReihenfolge(){
+  const rest = state.spieler.filter(n=>n!==state.stoppBy);
+  return state.stoppBy ? [state.stoppBy, ...rest] : state.spieler.slice();
+}
+
+function renderReveal(){
+  const reihen = revealReihenfolge();
+  const idx = state.revealIndex||0;
+  const aktuellerSpieler = reihen[idx];
+  const fertig = idx >= reihen.length;
+  const leaderView = istLeader();
+  const autoW = berechneAutoWertung();
+  const wertungFuer = (sp)=>{
+    const gespeichert = (state.wertung||{})[sp];
+    if(gespeichert) return gespeichert;
+    return autoW[sp] || {};
+  };
+
+  if(fertig){ renderRundenErgebnis(autoW); return; }
+
+  const kat = state.kategorien;
+  const w = wertungFuer(aktuellerSpieler);
+  const ansObj = state.antworten[aktuellerSpieler] || {};
+
+  app.innerHTML = `
+    <div class="kopf">
+      <h1>Auf<span>lösung</span></h1>
+      <div class="rundeninfo">Runde ${state.runde}<b>Buchstabe ${state.buchstabe}</b></div>
+    </div>
+
+    <div class="reveal-fortschritt">
+      ${reihen.map((n,i)=>`<div class="dot ${i<idx?'done':''} ${i===idx?'active':''}"></div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="reveal-kopf">
+        ${bild(aktuellerSpieler,'av','fb')}
+        <div class="who">
+          <div class="nm">${aktuellerSpieler}</div>
+          <div class="sub">${idx===0 && state.stoppBy?'hat STOPP gedrückt — deckt zuerst auf':'deckt jetzt auf'}</div>
+        </div>
+      </div>
+
+      <div class="reveal-rows">
+        ${kat.map(k=>{
+          const ans = ansObj[k] || '';
+          const pts = w[k] != null ? w[k] : 0;
+          const leer = !normalisiere(ans);
+          const istDup = pts===5;
+          const ptsClass = pts===10?'p10':(pts===5?'p5':'p0');
+          return `
+            <div class="reveal-row" data-kat="${escapeHtml(k)}">
+              <div class="rr-top">
+                <span class="rr-kat">${escapeHtml(k)}</span>
+                <span class="rr-pts ${ptsClass}">${pts}</span>
+              </div>
+              <div class="rr-ans ${leer?'leer':''}">${leer?'— leer —':escapeHtml(ans)}</div>
+              ${istDup?'<div class="rr-dup">↔ auch von jemand anderem genannt</div>':''}
+              ${leaderView && !leer ? `
+                <div class="rr-controls">
+                  <button class="set10 ${pts===10?'on':''}" data-set="10" data-kat="${escapeHtml(k)}">10 · Einzig</button>
+                  <button class="set5 ${pts===5?'on':''}" data-set="5" data-kat="${escapeHtml(k)}">5 · Doppelt</button>
+                  <button class="set0 ${pts===0?'on':''}" data-set="0" data-kat="${escapeHtml(k)}">0 · Ungültig</button>
+                </div>` : ''}
+            </div>`;
+        }).join('')}
+      </div>
+
+      <div class="reveal-nav">
+        ${leaderView ? `
+          <button class="btn-ghost" id="prevBtn" ${idx===0?'disabled':''}>Zurück</button>
+          <button class="btn-primary btn-block" id="nextBtn">${idx===reihen.length-1?'Runde auswerten':'Nächster Spieler →'}</button>
+        ` : `
+          <div class="hint" style="width:100%;"><b>${state.leader}</b> geht die Antworten durch…</div>
+        `}
+      </div>
+      ${leaderView ? '<button class="btn-ghost btn-block" id="notLobbyRev" style="margin-top:10px;font-size:13px;">Abbrechen → zurück zur Lobby</button>' : ''}
+    </div>
+  `;
+
+  if(leaderView){
+    const nlr = document.getElementById('notLobbyRev');
+    if(nlr) nlr.onclick = zurueckZurLobby;
+    app.querySelectorAll('.rr-controls button').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const k = btn.dataset.kat, val = parseInt(btn.dataset.set,10);
+        state.wertung = state.wertung || {};
+        if(!state.wertung[aktuellerSpieler]) state.wertung[aktuellerSpieler] = Object.assign({}, autoW[aktuellerSpieler]||{});
+        state.wertung[aktuellerSpieler][k] = val;
+        await saveState();
+      };
+    });
+    const prev = document.getElementById('prevBtn');
+    if(prev) prev.onclick = async ()=>{
+      sichereAktuelleWertung(autoW, aktuellerSpieler);
+      state.revealIndex = Math.max(0, idx-1);
+      await saveState();
+    };
+    document.getElementById('nextBtn').onclick = async ()=>{
+      sichereAktuelleWertung(autoW, aktuellerSpieler);
+      state.revealIndex = idx+1;
+      await saveState();
+    };
+  }
+}
+
+function sichereAktuelleWertung(autoW, sp){
+  state.wertung = state.wertung || {};
+  if(!state.wertung[sp]) state.wertung[sp] = Object.assign({}, autoW[sp]||{});
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function renderRundenErgebnis(autoW){
+  const finalW = {};
+  state.spieler.forEach(sp=>{
+    finalW[sp] = (state.wertung&&state.wertung[sp]) ? state.wertung[sp] : (autoW[sp]||{});
+  });
+  const rundenPunkte = {};
+  state.spieler.forEach(sp=>{
+    rundenPunkte[sp] = Object.values(finalW[sp]||{}).reduce((a,b)=>a+(b||0),0);
+  });
+
+  if(istLeader() && !state.rundeVerbucht){
+    state.gesamtpunkte = state.gesamtpunkte || {};
+    state.spieler.forEach(sp=>{
+      state.gesamtpunkte[sp] = (state.gesamtpunkte[sp]||0) + rundenPunkte[sp];
+    });
+    state.rundeVerbucht = true;
+    state.wertung = finalW;
+    await saveState();
+  }
+
+  const sortiert = state.spieler.slice().sort((a,b)=>(state.gesamtpunkte[b]||0)-(state.gesamtpunkte[a]||0));
+
+  app.innerHTML = `
+    <div class="kopf">
+      <h1>Runde ${state.runde} <span>fertig</span></h1>
+      <div class="rundeninfo">Zwischenstand</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Gesamtstand</div>
+      <div class="score-liste">
+        ${sortiert.map((n,i)=>`
+          <div class="score-row ${i===0?'gold':''}">
+            <span class="rank">${i+1}</span>
+            ${bild(n,'av','fb')}
+            <span class="nm">${n}</span>
+            <span class="pts">${state.gesamtpunkte[n]||0}</span>
+            <span class="rundenpts">+${rundenPunkte[n]||0}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    ${istLeader() ? `
+      <div class="card">
+        <button class="btn-primary btn-block btn-lg" id="naechsteRunde">Nächste Runde</button>
+        <button class="btn-ghost btn-block" id="zurLobby" style="margin-top:10px;">Zurück zur Lobby (Kategorien ändern)</button>
+        <div class="hint">Neuer Buchstabe, gleiche Kategorien. Zum Beenden unten „Spiel beenden“.</div>
+      </div>
+    ` : `
+      <div class="card"><div class="warte-box"><div class="spinner"></div><div class="txt"><b>${state.leader}</b> startet gleich die nächste Runde…</div></div></div>
+    `}
+  `;
+
+  if(istLeader()){
+    document.getElementById('naechsteRunde').onclick = starteRunde;
+    document.getElementById('zurLobby').onclick = zurueckZurLobby;
+  }
+}
+
+async function zurueckZurLobby(){
+  const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+  let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
+  // Punkte + Spieler + Kategorien behalten, nur zurück in die Lobby-Phase
+  s.phase = 'lobby';
+  s.buchstabe = null;
+  s.startAt = null;
+  s.stoppBy = null;
+  s.antworten = {};
+  s.wertung = {};
+  s.revealIndex = 0;
+  s.rundeVerbucht = false;
+  state = s;
+  aktuellePhaseGebaut = null; lobbySignatur=''; revealSignatur=''; runningSignatur='';
+  await saveState();
+  render();
+}
+
+function renderDone(){ renderLobby(); }
+
+SpielBeenden.init({
+  format: 'stadtlandfluss',
+  sichtbar: function(){ return istLeader(); },
+  sammle: async function(){
+    const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
+    const gp = (data && data.state && data.state.gesamtpunkte) || {};
+    return Object.entries(gp).map(function(e){ return { spieler:e[0], punkte:e[1] }; });
+  }
+});
+</script>
+</body>
+</html>

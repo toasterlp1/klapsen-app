@@ -1,0 +1,357 @@
+<!doctype html>
+<html class="host" lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Wer ist das? — Host</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../auth.js"></script>
+<script src="./bilder.js"></script>
+<script src="../avatare.js"></script>
+<script src="../symbole.js"></script>
+<style>
+  /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
+  :root{ --u: 1vw; }
+  @media (max-width:900px) and (orientation:portrait){
+    :root{ --u: 0.62vh; }
+    html.host, body.host{ height:auto; min-height:100%; overflow-y:auto; overflow-x:hidden; }
+  }
+  @media (max-width:900px) and (orientation:portrait) and (min-aspect-ratio:3/5){
+    :root{ --u: 0.72vh; }
+  }
+  @media (max-height:520px) and (orientation:landscape){
+    :root{ --u: 1.35vh; }
+  }
+
+  .avatar-pic{
+  width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;
+}
+  :root{
+    --bg:#0a0e1a; --panel:#12172a; --panel-border:#232b45;
+    --ink:#eef1f8; --muted:#6b7488; --accent:#00e5c7; --warn:#ffd166; --bad:#ff3860;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:transparent;width:calc(100 * var(--u));height:100vh;overflow:hidden;font-family:'Inter',sans-serif;}
+  .stage{
+    position:relative;width:calc(100 * var(--u));height:100vh;
+    background:radial-gradient(ellipse at 50% 10%, #10182f 0%, var(--bg) 68%);
+    display:flex;flex-direction:column;align-items:center;padding:30px 20px;
+  }
+  .header{display:flex;flex-direction:column;align-items:center;margin-bottom:18px;}
+  .title{
+    font-family:'Anton',sans-serif;font-size:36px;letter-spacing:5px;
+    color:var(--ink);text-shadow:0 0 20px rgba(0,229,199,.4);
+  }
+  .title-rule{width:56px;height:3px;border-radius:3px;margin-top:10px;background:var(--accent);opacity:.7;}
+
+  .frame-outer{
+    position:relative;width:min(56vh,600px);height:min(56vh,600px);padding:10px;
+    border-radius:26px;background:linear-gradient(160deg, #17233f, #0b1120);
+    box-shadow:0 0 50px rgba(0,229,199,.12), 0 10px 30px rgba(0,0,0,.4);
+  }
+  .frame-wrap{
+    position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;
+    background:#05070d;border:1px solid rgba(255,255,255,.08);
+  }
+  .corner{
+    position:absolute;width:26px;height:26px;border-color:var(--accent);opacity:.8;z-index:2;
+  }
+  .corner.tl{top:8px;left:8px;border-top:3px solid;border-left:3px solid;border-radius:8px 0 0 0;}
+  .corner.tr{top:8px;right:8px;border-top:3px solid;border-right:3px solid;border-radius:0 8px 0 0;}
+  .corner.bl{bottom:8px;left:8px;border-bottom:3px solid;border-left:3px solid;border-radius:0 0 0 8px;}
+  .corner.br{bottom:8px;right:8px;border-bottom:3px solid;border-right:3px solid;border-radius:0 0 8px 0;}
+
+  .frame-wrap img{
+    width:100%;height:100%;object-fit:contain;background:#05070d;
+    filter:blur(60px) saturate(1.05);
+    transform:scale(1.12);
+    transition:filter .6s linear;
+  }
+  .placeholder{
+    width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-family:'Anton',sans-serif;font-size:26px;letter-spacing:2px;text-align:center;
+  }
+
+  .points-bar{
+    position:relative;width:min(760px,70%);height:22px;margin:20px auto 0;
+    background:#141a2c;border:1px solid rgba(255,255,255,.12);
+    border-radius:7px;overflow:hidden;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,.5);
+    display:none;
+  }
+  .points-bar .fill{
+    position:absolute;left:0;top:0;bottom:0;
+    background:linear-gradient(90deg,#ff5470,#c41230);
+    box-shadow:0 0 16px rgba(255,84,112,.6);
+    transition:none;
+  }
+  .points-bar.paused .fill{ animation:barPulse 1s ease-in-out infinite; }
+  @keyframes barPulse{ 0%,100%{opacity:1} 50%{opacity:.5} }
+  .points-bar .lbl{
+    position:absolute;inset:0;z-index:2;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Anton',sans-serif;font-size:12px;letter-spacing:2px;color:#fff;
+    text-shadow:0 2px 6px rgba(0,0,0,.8);
+  }
+
+  .points-badge{
+    position:absolute;top:18px;right:18px;z-index:3;
+    width:96px;height:96px;border-radius:50%;
+    background:rgba(10,14,26,.85);border:3px solid var(--warn);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:0 0 22px rgba(255,209,102,.45);
+    transition:border-color .4s var(--ease), box-shadow .4s var(--ease);
+  }
+  .points-badge.low{border-color:var(--bad);box-shadow:0 0 22px rgba(255,56,96,.45);}
+  .points-badge .num{font-family:'Anton',sans-serif;font-size:44px;color:var(--ink);line-height:1;transition:color .4s var(--ease);}
+  .points-badge.low .num{color:var(--bad);}
+  .points-badge .lbl{font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:2px;}
+
+  .solved-banner{
+    position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;
+    background:rgba(5,7,13,.6);opacity:0;pointer-events:none;transition:opacity .35s var(--ease);
+  }
+  .solved-banner.show{opacity:1;}
+  .solved-banner .name{
+    font-family:'Anton',sans-serif;font-size:48px;color:var(--accent);
+    text-shadow:0 0 26px rgba(0,229,199,.75);text-align:center;padding:0 24px;
+    transform:scale(.85);transition:transform .4s var(--ease);
+  }
+  .solved-banner.show .name{transform:scale(1);}
+
+  .scanline{
+    position:absolute;left:0;right:0;height:3px;z-index:3;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow:0 0 16px 3px rgba(0,229,199,.85);
+    opacity:0;pointer-events:none;
+  }
+  .scanline.on{ opacity:.9; animation:scanMove 2.6s linear infinite; }
+  @keyframes scanMove{
+    0%{ top:4%; }
+    50%{ top:94%; }
+    100%{ top:4%; }
+  }
+
+  .active-buzzer{
+    margin-top:20px;height:44px;display:flex;align-items:center;justify-content:center;
+    font-family:'Anton',sans-serif;font-size:26px;letter-spacing:2px;color:var(--warn);
+    text-shadow:0 0 16px rgba(255,209,102,.5);opacity:0;transform:translateY(6px);
+    transition:opacity .3s var(--ease), transform .3s var(--ease);
+  }
+  .active-buzzer.show{opacity:1;transform:translateY(0);}
+
+  .scoreboard{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:18px;max-width:1100px;}
+  .player-card{
+    min-width:140px;padding:12px 18px;border-radius:14px;
+    background:var(--panel);border:2px solid var(--panel-border);
+    text-align:center;transition:border-color .3s var(--ease), box-shadow .3s var(--ease), opacity .3s var(--ease);
+  }
+  .player-card.active{border-color:var(--warn);box-shadow:0 0 18px rgba(255,209,102,.4);animation:cardPulse 1.8s ease-in-out infinite;}
+  @keyframes cardPulse{
+    0%,100%{box-shadow:0 0 14px rgba(255,209,102,.3);}
+    50%{box-shadow:0 0 22px rgba(255,209,102,.55);}
+  }
+  .player-card.out{opacity:.4;}
+  .player-card .name{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:.4px;}
+  .player-card .score{font-family:'Anton',sans-serif;font-size:26px;color:var(--accent);margin-top:2px;}
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body class="host">
+<div class="stage">
+  <div class="header">
+    <div class="title">WER IST DAS?</div>
+    <div class="title-rule"></div>
+  </div>
+
+  <div class="frame-outer">
+    <div class="frame-wrap" id="frameWrap">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="placeholder" id="placeholder">Warte auf Runde…</div>
+      <div class="scanline" id="scanline"></div>
+      <div class="points-badge" id="pointsBadge" style="display:none;">
+        <div class="num" id="pointsNum">3</div>
+        <div class="lbl">PUNKTE</div>
+      </div>
+      <div class="solved-banner" id="solvedBanner"><div class="name" id="solvedName"></div></div>
+    </div>
+    <div class="points-bar" id="pointsBar">
+      <div class="fill" id="pointsFill"></div>
+      <div class="lbl" id="pointsBarLbl"></div>
+    </div>
+  </div>
+
+  <div class="active-buzzer" id="activeBuzzer"></div>
+  <div class="scoreboard" id="scoreboard"></div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const PHASE1_MS = 8000;
+const FULL_CLEAR_MS = 13000;
+const BLUR_AT_PHASE_END = 8;
+
+const MAX_PUNKTE = 5;
+const MIN_PUNKTE = 1;
+const PUNKTE_DAUER_MS = FULL_CLEAR_MS;
+
+const frameWrap = document.getElementById('frameWrap');
+const placeholder = document.getElementById('placeholder');
+const pointsBadge = document.getElementById('pointsBadge');
+const pointsNum = document.getElementById('pointsNum');
+const solvedBanner = document.getElementById('solvedBanner');
+const solvedName = document.getElementById('solvedName');
+const activeBuzzerEl = document.getElementById('activeBuzzer');
+
+let fxLetzterBuzzer = null;
+let fxVorherigeBuzzedOut = [];
+let fxLetzteLoesung = null;
+const scoreboardEl = document.getElementById('scoreboard');
+
+let currentImg = null;
+let currentImgIndex = null;
+let state = null;
+
+function currentPoints(elapsed){
+  const t = Math.max(0, Math.min(1, elapsed / PUNKTE_DAUER_MS));
+  return Math.max(MIN_PUNKTE, Math.ceil(MAX_PUNKTE - t * (MAX_PUNKTE - MIN_PUNKTE)));
+}
+function punkteAnteil(elapsed){
+  const t = Math.max(0, Math.min(1, elapsed / PUNKTE_DAUER_MS));
+  return 1 - t;
+}
+
+function render(){
+  if(!state) return;
+  const { players={}, imageIndex=null, revealStartedAt=null, solved=false, buzzQueue=[], buzzedOut=[] } = state;
+
+  if(imageIndex!=null && BILDER[imageIndex]){
+    if(!currentImg || currentImgIndex !== imageIndex){
+      frameWrap.querySelectorAll('img').forEach(n=>n.remove());
+      currentImg = document.createElement('img');
+      currentImg.src = BILDER[imageIndex].url;
+      frameWrap.insertBefore(currentImg, placeholder);
+      currentImgIndex = imageIndex;
+    }
+    placeholder.style.display='none';
+    currentImg.style.display='block';
+    pointsBadge.style.display='flex';
+  } else {
+    placeholder.style.display='flex';
+    pointsBadge.style.display='none';
+    if(currentImg){ currentImg.remove(); currentImg=null; currentImgIndex=null; }
+  }
+
+ const active = buzzQueue.find(n=>!buzzedOut.includes(n));
+
+  if(active && active !== fxLetzterBuzzer && window.HOSTFX){
+    HOSTFX.buzz(active, avatarFor(active));
+  }
+  fxLetzterBuzzer = active || null;
+
+  if(window.HOSTFX){
+    buzzedOut.filter(n => !fxVorherigeBuzzedOut.includes(n)).forEach(n => HOSTFX.wrong(n));
+  }
+  fxVorherigeBuzzedOut = buzzedOut.slice();
+
+  const loesungSchluessel = solved ? `${imageIndex}-gelöst` : null;
+  if(loesungSchluessel && loesungSchluessel !== fxLetzteLoesung && window.HOSTFX && active){
+    HOSTFX.correct(active);
+  }
+  fxLetzteLoesung = loesungSchluessel;
+
+  document.getElementById('scanline').classList.toggle('on', !!(imageIndex!=null && currentImg && !solved));
+
+  scoreboardEl.innerHTML = Object.entries(players).map(([name,score])=>{
+    const isActive = name===active && !solved;
+    const isOut = buzzedOut.includes(name) && !solved;
+    const avatarUrl = avatarFor(name);
+    return `<div class="player-card ${isActive?'active ka-live-green':''} ${isOut?'out':''}" style="position:relative;">
+      ${isActive ? `<span class="ka-badge-tr">${KA.mic()}</span>` : ''}
+      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:6px;">` : ''}
+      <div class="name">${name}</div><div class="score">${score}</div>
+    </div>`;
+  }).join('');
+
+  activeBuzzerEl.textContent = active && !solved ? active + ' ist dran!' : '';
+  activeBuzzerEl.classList.toggle('show', !!(active && !solved));
+
+  if(solved && imageIndex!=null && BILDER[imageIndex]){
+    solvedBanner.classList.add('show');
+    solvedName.textContent = BILDER[imageIndex].antwort;
+  } else {
+    solvedBanner.classList.remove('show');
+  }
+}
+
+function tick(){
+  const bar = document.getElementById('pointsBar');
+  const fill = document.getElementById('pointsFill');
+  const barLbl = document.getElementById('pointsBarLbl');
+
+  if(state && state.imageIndex!=null && state.revealStartedAt && !state.solved && currentImg){
+
+    const jetzt = state.frozenAt || Date.now();
+    const elapsed = jetzt - state.revealStartedAt;
+
+    let blur;
+    if(elapsed < PHASE1_MS){
+      const t = elapsed / PHASE1_MS;
+      blur = 60 + (BLUR_AT_PHASE_END - 60) * t;
+    } else {
+      const t2 = Math.max(0, Math.min(1, (elapsed - PHASE1_MS) / (FULL_CLEAR_MS - PHASE1_MS)));
+      blur = BLUR_AT_PHASE_END * (1 - t2);
+    }
+    currentImg.style.filter = `blur(${blur}px) saturate(1.05)`;
+
+    const pts = currentPoints(elapsed);
+    pointsNum.textContent = pts;
+    pointsBadge.classList.toggle('low', pts === MIN_PUNKTE);
+
+    if(bar){
+      bar.style.display = 'block';
+      const wartetAufBuzzer = (state.buzzQueue || []).some(n => !(state.buzzedOut || []).includes(n));
+      bar.classList.toggle('paused', wartetAufBuzzer);
+      fill.style.width = (punkteAnteil(elapsed) * 100) + '%';
+      barLbl.textContent = wartetAufBuzzer
+        ? 'BUZZER — ZEIT ANGEHALTEN'
+        : `${pts} PUNKTE`;
+    }
+  } else if(state && state.solved && currentImg){
+    currentImg.style.filter = 'blur(0px) saturate(1.05)';
+    if(bar){ bar.style.display = 'none'; }
+  } else if(bar){
+    bar.style.display = 'none';
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+async function loadState(){
+  const { data } = await sb.from('wid_state').select('state').eq('id',1).single();
+  state = data?.state || {};
+  render();
+}
+loadState();
+setInterval(loadState, 2000);
+
+sb.channel('wid_state_channel')
+  .on('postgres_changes', { event:'*', schema:'public', table:'wid_state' }, payload=>{
+    state = payload.new.state || {};
+    render();
+  }).subscribe();
+</script>
+<script src="../zurueck.js"></script>
+<script src="../cam.js"></script>
+<script src="../hintergrund.js"></script>
+<script src="../host-fx.js"></script>
+</body>
+</html>
