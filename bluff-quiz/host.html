@@ -94,13 +94,39 @@
 
   .head{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;margin-bottom:2.2vh;animation:riseIn .6s var(--ease) both;}
   .logo{
+    position:relative;display:inline-flex;align-items:center;gap:calc(.7 * var(--u));
     font-family:var(--font-display);
-    font-size:calc(5.4 * var(--u));line-height:.9;letter-spacing:2px;
-    background:linear-gradient(180deg,#e9d5ff 0%, var(--violet) 55%, #7c3aed 100%);
+    font-size:calc(6.2 * var(--u));line-height:.9;letter-spacing:2px;
+    background:linear-gradient(103deg,
+      var(--truth) 0%, #b6f5da 34%,
+      #e9d5ff 47%, var(--violet) 53%,
+      #ffb3c6 66%, var(--lie) 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 22px rgba(168,85,247,.45));
+    filter:drop-shadow(0 0 26px rgba(168,85,247,.5));
   }
   .logo em{font-style:normal;color:var(--lie);-webkit-text-fill-color:var(--lie);}
+
+  /* Masken-Symbol: halb Wahrheit, halb Luege */
+  .logo .maske{
+    width:calc(4.2 * var(--u));height:calc(4.2 * var(--u));flex-shrink:0;
+    filter:drop-shadow(0 0 16px rgba(255,61,104,.6));
+    animation:maskeKipp 4.6s ease-in-out infinite;
+  }
+  .logo .maske svg{width:100%;height:100%;display:block;}
+  @keyframes maskeKipp{
+    0%,100%{transform:rotate(-5deg) translateY(0);}
+    50%{transform:rotate(5deg) translateY(-4px);}
+  }
+
+  /* Trennblitz zwischen Wahrheit und Luege */
+  .logo .riss{
+    position:absolute;left:50%;top:-8%;height:116%;width:calc(.34 * var(--u));
+    transform:translateX(-50%) skewX(-11deg);
+    background:linear-gradient(180deg,transparent,rgba(255,255,255,.8) 22%,rgba(255,255,255,.8) 78%,transparent);
+    opacity:.5;pointer-events:none;
+    animation:rissFlacker 3.2s ease-in-out infinite;
+  }
+  @keyframes rissFlacker{0%,100%{opacity:.28;}45%{opacity:.75;}}
   .tag{
     font-family:var(--font-ui);font-weight:600;font-size:calc(1.05 * var(--u));letter-spacing:5px;
     text-transform:uppercase;color:var(--muted);margin-top:.6vh;
@@ -385,7 +411,14 @@ async function zeichne(){
 function baueGeruest(runde, luegen, stimmen){
   const kopf =
     '<div class="ambient" id="ambient"></div>' +
-    '<div class="head"><div class="logo">BLUFF<em>-</em>QUIZ</div>' +
+    '<div class="head"><div class="logo">' +
+      '<span class="maske"><svg viewBox="0 0 48 48" fill="none">' +
+        '<path d="M24 5 C13 5 6 11 6 20 c0 11 9 21 18 23 9-2 18-12 18-23 0-9-7-15-18-15Z" fill="#3ee6a0" opacity=".92"/>' +
+        '<path d="M24 5 c11 0 18 6 18 15 0 11-9 21-18 23V5Z" fill="#ff3d68" opacity=".92"/>' +
+        '<circle cx="17" cy="21" r="2.6" fill="#07120d"/><circle cx="31" cy="21" r="2.6" fill="#2b0710"/>' +
+        '<path d="M16 31 q8 5 16 0" stroke="#07120d" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
+      '</svg></span>' +
+      'BLUFF<em>-</em>QUIZ<span class="riss"></span></div>' +
     '<div class="tag">Wahrheit oder Lüge</div></div>' +
     '<div class="frage">' + frageHtml(runde.frage) + '</div>';
 
