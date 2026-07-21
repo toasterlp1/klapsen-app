@@ -38,27 +38,107 @@
     background:radial-gradient(ellipse at 50% 10%, #1a1030 0%, var(--bg) 68%);
     display:flex;flex-direction:column;align-items:center;padding:30px 20px;
   }
-  .header{display:flex;flex-direction:column;align-items:center;margin-bottom:18px;}
-  .title{
-    font-family:'Anton',sans-serif;font-size:36px;letter-spacing:5px;
-    color:var(--ink);text-shadow:0 0 20px rgba(196,77,255,.5);
+
+  /* Logo oben links */
+  .header{
+    position:absolute;left:calc(2 * var(--u));top:22px;z-index:60;
+    display:flex;flex-direction:column;align-items:flex-start;margin-bottom:0;
   }
-  .title-rule{width:56px;height:3px;border-radius:3px;margin-top:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.8;}
+  .logo-morph{position:relative;display:inline-block;}
+  .logo-arc{
+    position:absolute;left:-6px;right:-6px;top:-26px;height:34px;
+    pointer-events:none;
+  }
+  .title{
+    font-family:'Anton',sans-serif;font-size:calc(4.2 * var(--u));letter-spacing:2px;
+    color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.55), 0 0 26px rgba(255,255,255,.25);
+    line-height:1;
+  }
+  .title-rule{display:none;}
+
+  /* Runden-Zaehler oben rechts */
+  .round-counter{
+    position:absolute;right:calc(2 * var(--u));top:22px;z-index:60;
+    background:#0d1220;border:1px solid rgba(255,255,255,.18);border-radius:16px;
+    padding:10px calc(2 * var(--u));
+    font-family:'Anton',sans-serif;font-size:calc(2.6 * var(--u));color:#fff;line-height:1;
+    box-shadow:0 8px 26px -10px rgba(0,0,0,.9);
+  }
+
+  /* Buzzer-Kreis + Buzz Order rechts */
+  .buzz-side{
+    position:absolute;right:calc(2 * var(--u));top:calc(22px + 9vh);z-index:60;
+    display:flex;flex-direction:column;align-items:center;gap:14px;width:calc(15 * var(--u));
+  }
+  .buzz-orb{
+    width:calc(7.4 * var(--u));height:calc(7.4 * var(--u));border-radius:50%;
+    background:linear-gradient(150deg,#c44dff,#ff3860);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Anton',sans-serif;font-size:calc(1.15 * var(--u));letter-spacing:2px;color:#fff;
+    box-shadow:0 0 34px -4px rgba(255,56,96,.85), 0 0 0 2px rgba(255,255,255,.14) inset;
+    animation:orbPulse 1.9s ease-in-out infinite;
+  }
+  @keyframes orbPulse{
+    0%,100%{box-shadow:0 0 30px -6px rgba(255,56,96,.75), 0 0 0 2px rgba(255,255,255,.14) inset;}
+    50%{box-shadow:0 0 48px 0 rgba(255,56,96,1), 0 0 0 2px rgba(255,255,255,.2) inset;}
+  }
+  .buzz-order{
+    width:100%;border-radius:12px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 8px 26px -12px rgba(0,0,0,.9);
+  }
+  .buzz-order .head{
+    background:linear-gradient(90deg,#7c3aed,#ff3d84);
+    font-family:'Anton',sans-serif;font-size:calc(1.05 * var(--u));letter-spacing:1px;
+    color:#fff;padding:8px 12px;
+  }
+  .buzz-order .list{
+    background:#0d1220;min-height:calc(4 * var(--u));padding:8px 12px;
+    display:flex;flex-direction:column;gap:5px;
+  }
+  .buzz-order .list .row{
+    font-size:calc(.95 * var(--u));font-weight:700;color:var(--ink);
+    display:flex;align-items:center;gap:7px;
+  }
+  .buzz-order .list .row .idx{
+    font-family:'Anton',sans-serif;color:var(--accent2);min-width:calc(1 * var(--u));
+  }
+  .buzz-order .list .leer{font-size:calc(.85 * var(--u));color:var(--muted);}
+
+  /* ONLY 1 Banner */
+  .only-one{
+    position:absolute;right:calc(2 * var(--u));bottom:calc(18vh);z-index:60;
+    background:linear-gradient(160deg,#ff4d5e,#d81f36);
+    font-family:'Anton',sans-serif;font-size:calc(3 * var(--u));letter-spacing:2px;color:#fff;
+    padding:2vh calc(3 * var(--u));border-radius:14px;
+    box-shadow:0 0 40px -6px rgba(255,56,96,.9);
+    opacity:0;transform:scale(.9);pointer-events:none;
+    transition:opacity .35s var(--ease), transform .35s var(--ease);
+  }
+  .only-one.show{opacity:1;transform:scale(1);}
+
+  @media (max-width:900px){
+    .header{left:10px;top:12px;}
+    .title{font-size:26px;}
+    .round-counter{right:10px;top:12px;font-size:18px;padding:6px 12px;}
+    .buzz-side{position:static;width:auto;flex-direction:row;margin-top:14px;}
+    .buzz-orb{width:64px;height:64px;font-size:11px;}
+    .buzz-order{width:150px;}
+    .only-one{position:static;margin-top:12px;font-size:22px;padding:10px 18px;}
+  }
 
   .frame-outer{
     position:relative;width:min(56vh,600px);height:min(56vh,600px);padding:10px;
     border-radius:26px;background:linear-gradient(160deg, #241640, #0b1120);
     box-shadow:0 0 50px rgba(196,77,255,.16), 0 10px 30px rgba(0,0,0,.4);
+    margin-top:6vh;
   }
   .frame-wrap{
     position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;
-    background:#05070d;border:1px solid rgba(255,255,255,.08);
+    background:#05070d;border:3px solid #ff2033;
+    box-shadow:0 0 34px -4px rgba(255,32,51,.75), 0 0 0 1px rgba(255,255,255,.06) inset;
   }
-  .corner{position:absolute;width:26px;height:26px;border-color:var(--accent);opacity:.8;z-index:2;}
-  .corner.tl{top:8px;left:8px;border-top:3px solid;border-left:3px solid;border-radius:8px 0 0 0;}
-  .corner.tr{top:8px;right:8px;border-top:3px solid;border-right:3px solid;border-radius:0 8px 0 0;}
-  .corner.bl{bottom:8px;left:8px;border-bottom:3px solid;border-left:3px solid;border-radius:0 0 0 8px;}
-  .corner.br{bottom:8px;right:8px;border-bottom:3px solid;border-right:3px solid;border-radius:0 0 8px 0;}
+  .corner{display:none;}
 
   /* Morph-Bild: scharf gezeigt (die Verschmelzung ist das Raetsel) */
   .morph-img{
@@ -145,14 +225,34 @@
 <body class="host">
 <div class="stage">
   <div class="header">
-    <div class="title">MORPH</div>
-    <div class="title-rule"></div>
+    <div class="logo-morph">
+      <svg class="logo-arc" viewBox="0 0 200 40" aria-hidden="true">
+        <defs>
+          <marker id="mArrow" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#ff2033"/>
+          </marker>
+        </defs>
+        <path d="M14 34 C 40 4, 160 4, 186 30" fill="none" stroke="#ff2033"
+              stroke-width="7" stroke-linecap="round" marker-end="url(#mArrow)"/>
+      </svg>
+      <div class="title">MORPH</div>
+    </div>
   </div>
+
+  <div class="round-counter" id="roundCounter">1/2</div>
+
+  <div class="buzz-side">
+    <div class="buzz-orb">BUZZER</div>
+    <div class="buzz-order">
+      <div class="head">Buzz Order</div>
+      <div class="list" id="buzzOrderList"><span class="leer">—</span></div>
+    </div>
+  </div>
+
+  <div class="only-one" id="onlyOne">ONLY 1</div>
 
   <div class="frame-outer">
     <div class="frame-wrap" id="frameWrap">
-      <div class="corner tl"></div><div class="corner tr"></div>
-      <div class="corner bl"></div><div class="corner br"></div>
       <div class="placeholder" id="placeholder">Warte auf Runde…</div>
       <img class="morph-img" id="morphImg" alt="">
       <div class="reveal-split" id="revealSplit">
@@ -295,6 +395,23 @@ function render(){
 
   activeBuzzerEl.textContent = active && !solved ? active + ' ist dran!' : '';
   activeBuzzerEl.classList.toggle('show', !!(active && !solved));
+
+  const roundEl = document.getElementById('roundCounter');
+  if(roundEl) roundEl.textContent = Math.min(Math.max(revealStep,1),2) + '/2';
+
+  const orderList = document.getElementById('buzzOrderList');
+  if(orderList){
+    const offen = buzzQueue.filter(n => !buzzedOut.includes(n));
+    orderList.innerHTML = buzzQueue.length
+      ? buzzQueue.map((n,i)=>{
+          const raus = buzzedOut.includes(n);
+          return `<div class="row" style="${raus?'opacity:.35;text-decoration:line-through;':''}">`
+               + `<span class="idx">${i+1}</span><span>${n}</span></div>`;
+        }).join('')
+      : '<span class="leer">—</span>';
+    const onlyOneEl = document.getElementById('onlyOne');
+    if(onlyOneEl) onlyOneEl.classList.toggle('show', offen.length === 1 && !solved);
+  }
 }
 
 function tick(){
