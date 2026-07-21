@@ -3374,7 +3374,7 @@ const CATEGORIES = [
         { frage: "Wie nennt man die Angst vor anderen Menschen?", antwort: "Soziale Phobie" },
         { frage: "Wofür steht die Abkürzung PTBS?", antwort: "Posttraumatische Belastungsstörung" },
         { frage: "In welcher Schlafphase träumen wir am meisten?", antwort: "REM-Schlaf" },
-        { frage: "Wie nennt man das Verlangen nach immer mehr von einer Droge?", antwort: "Toleranz" },
+        { frage: "Wie nennt man das Verlangen nach immer mehr von einer Droge?", antwort: "Sucht" },
         { frage: "Wie nennt man eine Essstörung mit starkem Untergewicht?", antwort: "Magersucht" },
         { frage: "Wie nennt man die Fachrichtung der Medizin für die Psyche?", antwort: "Psychiatrie" },
         { frage: "Welcher Beruf darf Medikamente verschreiben: Psychiater oder Psychologe?", antwort: "Psychiater" },
