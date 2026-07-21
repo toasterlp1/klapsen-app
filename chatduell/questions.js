@@ -33,9 +33,9 @@ const QUESTIONS = [
   {
     frage: "Nenne etwas, das man in einem Hotelzimmer findet",
     antworten: [
-      { text: "Bett", punkte: 35 },
-      { text: "Fernseher", punkte: 25 },
-      { text: "Minibar", punkte: 20 },
+      { text: "Benutztes Kondom", punkte: 35 },
+      { text: "Kleidung von anderen Leuten", punkte: 25 },
+      { text: "Zahnbürste", punkte: 20 },
       { text: "Safe", punkte: 12 },
       { text: "Bibel in der Schublade", punkte: 8 },
     ]
@@ -63,7 +63,7 @@ const QUESTIONS = [
   {
     frage: "Nenne ein Land, in das viele Leute in den Ferien reisen",
     antworten: [
-      { text: "Spanien", punkte: 35 },
+      { text: "Japan", punkte: 35 },
       { text: "Italien", punkte: 25 },
       { text: "Türkei", punkte: 18 },
       { text: "Griechenland", punkte: 12 },
@@ -117,7 +117,7 @@ const QUESTIONS = [
       { text: "Joghurt", punkte: 25 },
       { text: "Resteessen", punkte: 20 },
       { text: "Gemüse", punkte: 12 },
-      { text: "Käse", punkte: 8 },
+      { text: "Fleisch", punkte: 8 },
     ]
   },
   {
