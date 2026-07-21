@@ -103,6 +103,73 @@
   .heart-ic.popping{ animation:heartPop .45s ease-in forwards; }
 
   .header{text-align:center;z-index:40;pointer-events:none;flex-shrink:0;padding-top:8px;}
+
+  /* Runden-Badge oben links */
+  .round-badge{
+    position:absolute;left:22px;top:18px;z-index:60;pointer-events:none;
+    display:flex;align-items:center;gap:9px;
+    background:rgba(14,18,26,.82);border:1px solid rgba(255,255,255,.14);
+    border-radius:999px;padding:8px 18px;
+    box-shadow:0 6px 20px -8px rgba(0,0,0,.8), 0 0 18px -6px var(--gold-glow);
+    backdrop-filter:blur(6px);
+  }
+  .round-badge .lbl{
+    font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2.5px;
+    color:var(--muted);text-transform:uppercase;
+  }
+  .round-badge .num{
+    font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;color:var(--ink);
+  }
+
+  /* Kategorie + Game-Zaehler oben rechts */
+  .top-right{
+    position:absolute;right:22px;top:18px;z-index:60;pointer-events:none;
+    display:flex;align-items:center;gap:12px;
+  }
+  .category-pill{
+    position:relative;overflow:hidden;
+    font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:2.5px;
+    color:#fff;padding:11px 26px;border-radius:999px;
+    background:linear-gradient(160deg, #d94a5a, #a4202f);
+    border:1px solid rgba(255,255,255,.22);
+    box-shadow:0 6px 22px -8px rgba(0,0,0,.85), 0 0 26px -4px rgba(217,74,90,.75);
+    animation:catGlow 2.8s ease-in-out infinite;
+    transition:opacity .35s ease, transform .35s cubic-bezier(.2,.8,.2,1);
+    white-space:nowrap;
+  }
+  @keyframes catGlow{
+    0%,100%{box-shadow:0 6px 22px -8px rgba(0,0,0,.85), 0 0 26px -4px rgba(217,74,90,.75);}
+    50%{box-shadow:0 6px 22px -8px rgba(0,0,0,.85), 0 0 40px -2px rgba(217,74,90,1);}
+  }
+  .category-pill::after{
+    content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;
+    background:linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
+    animation:catShine 3.6s ease-in-out infinite;
+  }
+  @keyframes catShine{
+    0%,72%{left:-60%;} 100%{left:120%;}
+  }
+  .category-pill.leer{
+    background:rgba(14,18,26,.82);border-color:rgba(255,255,255,.12);
+    color:var(--muted);animation:none;box-shadow:0 6px 20px -8px rgba(0,0,0,.8);
+  }
+  .category-pill.leer::after{display:none;}
+  .game-pill{
+    font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:var(--ink);
+    padding:11px 20px;border-radius:999px;white-space:nowrap;
+    background:linear-gradient(160deg, #4a3d8f, #2a2159);
+    border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 22px -8px rgba(0,0,0,.85), 0 0 20px -6px rgba(120,90,240,.7);
+  }
+
+  @media (max-width:900px){
+    .round-badge{left:12px;top:10px;padding:6px 13px;}
+    .round-badge .num{font-size:16px;}
+    .top-right{right:12px;top:10px;gap:7px;}
+    .category-pill{font-size:14px;padding:8px 16px;letter-spacing:1.5px;}
+    .game-pill{font-size:13px;padding:8px 13px;}
+  }
+
   .title{
     font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:5px;
     background:linear-gradient(180deg,#fffdf6 0%, var(--ink) 60%, var(--gold) 140%);
@@ -182,9 +249,18 @@
 <div class="stage" id="stage">
   <div class="lives-strip" id="livesStrip"></div>
 
+  <div class="round-badge">
+    <span class="lbl">Round</span>
+    <span class="num" id="roundNum">1</span>
+  </div>
+
+  <div class="top-right">
+    <div class="category-pill leer" id="categoryName">Warte auf Kategorie&hellip;</div>
+    <div class="game-pill" id="gamePill">GAME 1 / 4</div>
+  </div>
+
   <div class="header">
     <div class="title">HIGHER OR LOWER</div>
-    <div class="category-wrap"><div class="category-name" id="categoryName">Warte auf Kategorie&hellip;</div></div>
   </div>
 
   <div class="ruler" id="ruler">
@@ -276,6 +352,7 @@ function updateCategoryName(){
   el.style.transform = 'translateY(6px)';
   setTimeout(()=>{
     el.textContent = category ? category.name : 'Warte auf Kategorie\u2026';
+    el.classList.toggle('leer', !category);
     el.style.opacity = 1;
     el.style.transform = 'translateY(0)';
   }, 180);
