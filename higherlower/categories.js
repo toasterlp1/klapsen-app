@@ -266,7 +266,7 @@ const CATEGORIES = [
       { label: "My Hero Academia (bis St. 7)",  value: 160,  url: "https://aniworld.to/public/img/cover/my-hero-academia-stream-cover-7tVGmPwXpceHfN6ryKeZVYH5bADdAvi8_220x330.jpg" },
       { label: "Naruto (Original)",             value: 220,  url: "https://aniworld.to/public/img/cover/naruto-stream-cover-KyerU8M7Jb4v3jGANFyBceoHIeG5fKn4_220x330.jpg" },
       { label: "Dragon Ball Z",                 value: 291,  url: "https://aniworld.to/public/img/cover/dragonball-z-stream-cover-pnuMY6dEwzVSPBJHxvMbJrHXjzNS5EOm_220x330.jpg" },
-      { label: "Fairy Tail",                    value: 328,  url: "https://aniworld.to/public/img/cover/fairy-tail-stream-cover-tZ0Rpy55QNNw57a0bmA70FKPoYJQGUrF_220x330.jpg" }
+      { label: "Fairy Tail",                    value: 328,  url: "https://aniworld.to/public/img/cover/fairy-tail-stream-cover-tZ0Rpy55QNNw57a0bmA70FKPoYJQGUrF_220x330.jpg" },
       { label: "Bleach (Original)",             value: 366,  url: "https://aniworld.to/public/img/cover/bleach-stream-cover-3zPD5VwzRq15HdsjOSyiaza99umvoY6I_220x330.jpg" },
       { label: "Naruto Shippuden",              value: 500,  url: "https://aniworld.to/public/img/cover/naruto-shippuden-stream-cover-2wUIuNMOJ5oTb2fHFCsW3sWfRnq64QYA_220x330.jpg" },
       { label: "One Piece (Stand 2026)",        value: 1140, url: "https://aniworld.to/public/img/cover/one-piece-stream-cover-ljP3zaMu0lAwvSQ06fIijEC780tOB7kL_220x330.png" },
