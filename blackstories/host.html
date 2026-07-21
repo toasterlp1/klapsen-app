@@ -98,14 +98,52 @@
   .stage{position:absolute;top:118px;left:50%;transform:translateX(-50%);width:1060px;display:flex;flex-direction:column;align-items:center;}
 
   .logo{
+    position:relative;
     font-family:var(--font-display);
-    font-size:96px;line-height:.92;text-align:center;
+    font-size:104px;line-height:.92;text-align:center;
     letter-spacing:2px;
-    background:linear-gradient(180deg,#4fe6a0 0%, #ff3d68 100%);
+    background:linear-gradient(180deg,#d8ccff 0%, #9b6bff 42%, #ff3d68 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 18px rgba(255,61,104,.45)) drop-shadow(0 0 34px rgba(63,230,150,.25));
+    filter:drop-shadow(0 0 20px rgba(255,61,104,.5)) drop-shadow(0 0 40px rgba(155,107,255,.35));
     margin-bottom:28px;
-    -webkit-text-stroke:1.5px rgba(255,61,104,.55);
+    -webkit-text-stroke:1.5px rgba(255,61,104,.5);
+    z-index:2;
+  }
+
+  /* Blutmond hinter dem Logo */
+  .mond{
+    position:absolute;left:50%;top:-46px;transform:translateX(-50%);
+    width:190px;height:190px;border-radius:50%;z-index:1;pointer-events:none;
+    background:radial-gradient(circle at 38% 34%, #ff6b86 0%, #b3243f 46%, #4a0a1a 78%, transparent 80%);
+    filter:blur(1px) drop-shadow(0 0 60px rgba(255,61,104,.5));
+    opacity:.42;
+    animation:mondGlut 6.5s ease-in-out infinite;
+  }
+  @keyframes mondGlut{
+    0%,100%{opacity:.34;transform:translateX(-50%) scale(1);}
+    50%{opacity:.55;transform:translateX(-50%) scale(1.05);}
+  }
+  /* Kratzer ueber dem Mond */
+  .mond::after{
+    content:'';position:absolute;inset:0;border-radius:50%;
+    background:
+      linear-gradient(114deg,transparent 43%,rgba(30,6,14,.65) 45%,transparent 47%),
+      linear-gradient(72deg,transparent 61%,rgba(30,6,14,.45) 63%,transparent 65%);
+  }
+
+  /* Nebelschwaden unter dem Logo */
+  .nebel{
+    position:absolute;left:50%;top:82px;transform:translateX(-50%);
+    width:560px;height:70px;z-index:1;pointer-events:none;opacity:.5;
+    background:
+      radial-gradient(ellipse 46% 58% at 26% 52%, rgba(155,107,255,.4), transparent 70%),
+      radial-gradient(ellipse 40% 52% at 68% 46%, rgba(63,230,224,.28), transparent 72%);
+    filter:blur(13px);
+    animation:nebelZieht 13s ease-in-out infinite alternate;
+  }
+  @keyframes nebelZieht{
+    0%{transform:translateX(-52%) scaleX(1);}
+    100%{transform:translateX(-48%) scaleX(1.12);}
   }
 
   .card{
@@ -208,6 +246,8 @@
   </div>
 
   <div class="stage">
+    <div class="mond" aria-hidden="true"></div>
+    <div class="nebel" aria-hidden="true"></div>
     <div class="logo">BLACK<br>STORIES</div>
 
     <div class="card" id="card">
