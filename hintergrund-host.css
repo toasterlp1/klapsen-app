@@ -1,0 +1,169 @@
+/*
+  Host-Hintergrund: ruhig und statisch.
+
+  Ersetzt das animierte Partikelnetz durch eine feste Komposition:
+  weicher Farbschimmer in der Modusfarbe, feines Raster fuer Tiefe,
+  Vignette als Rahmen. Nichts davon bewegt sich.
+
+  Aktions-Effekte (Buzzer, Joker, Punkte, Richtig/Falsch) laufen
+  ueber host-fx.js und werden hier NICHT angefasst.
+*/
+
+/* ---------- Laufenden Hintergrund abschalten ---------- */
+#ka-bg,
+#ka-bg-huelle,
+#ka-bg-raster,
+#ka-bg-vignette,
+#ka-bg-korn{
+  display:none !important;
+}
+
+/* ---------- Deko-Ebenen der Modi abschalten ---------- */
+.host .orbs,
+.host .orbs > *,
+.host .o1, .host .o2, .host .o3, .host .o4,
+.host .ambient,
+.host .ambient > *,
+.host .particles,
+.host .particles > *,
+.host .particle,
+.host .partikel,
+.host .spark,
+.host .sparks,
+.host .ember,
+.host .embers,
+.host .mask-float,
+.host .glow-ring,
+.host .floaties,
+.host .bg-anim{
+  display:none !important;
+}
+
+/*
+  Dauerbewegung auf Flaechen stoppen. Zustandsanzeigen wie
+  .onair-dot, .turn-bar oder .reveal-bar bleiben erhalten,
+  weil sie echte Information tragen.
+*/
+.host .stage,
+.host .panel,
+.host .avatar-card,
+.host .jk,
+.host .round-box,
+.host .title-rule{
+  animation:none !important;
+}
+
+/* ---------- Der neue Hintergrund ---------- */
+/*
+  --akzent-rgb wird pro Modus im Kopf der Seite gesetzt, als
+  Zahlentripel wie "0,229,199". So laesst sich die Deckkraft frei
+  steuern, ohne auf color-mix angewiesen zu sein.
+*/
+.host body,
+body.host{
+  background-color:#080b14;
+}
+
+.host .stage{
+  position:relative;
+  isolation:isolate;
+  background:
+    /* Schimmer oben in der Modusfarbe, sehr zurueckhaltend */
+    radial-gradient(120% 80% at 50% -10%,
+      rgba(var(--akzent-rgb, 74,127,208), .16) 0%,
+      rgba(var(--akzent-rgb, 74,127,208), 0) 58%),
+    /* Zweiter Schimmer unten fuer Tiefe */
+    radial-gradient(90% 60% at 50% 108%,
+      rgba(var(--akzent-rgb, 74,127,208), .09) 0%,
+      rgba(var(--akzent-rgb, 74,127,208), 0) 62%),
+    /* Grundflaeche */
+    linear-gradient(178deg, #101726 0%, #0a0f1b 52%, #070a12 100%)
+    !important;
+}
+
+/*
+  Quizduell hat kein .stage-Element, dort liegt der Hintergrund
+  direkt auf dem body. Gleiche Komposition, gleiche Wirkung.
+*/
+body.host:not(:has(.stage)){
+  background:
+    radial-gradient(120% 80% at 50% -10%,
+      rgba(var(--akzent-rgb, 74,127,208), .16) 0%,
+      rgba(var(--akzent-rgb, 74,127,208), 0) 58%),
+    radial-gradient(90% 60% at 50% 108%,
+      rgba(var(--akzent-rgb, 74,127,208), .09) 0%,
+      rgba(var(--akzent-rgb, 74,127,208), 0) 62%),
+    linear-gradient(178deg, #101726 0%, #0a0f1b 52%, #070a12 100%)
+    fixed !important;
+}
+
+body.host:not(:has(.stage))::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.030) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.030) 1px, transparent 1px);
+  background-size:72px 72px;
+  -webkit-mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
+  mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
+}
+
+body.host:not(:has(.stage))::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 96% 88% at 50% 44%,
+      transparent 46%, rgba(0,0,0,.38) 82%, rgba(0,0,0,.58) 100%);
+}
+
+/* Feines Raster, nach aussen ausgeblendet */
+.host .stage::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-2;
+  pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.030) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.030) 1px, transparent 1px);
+  background-size:72px 72px;
+  -webkit-mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
+  mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
+  animation:none !important;
+}
+
+/* Vignette rahmt das Bild im Stream */
+.host .stage::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 96% 88% at 50% 44%,
+      transparent 46%, rgba(0,0,0,.38) 82%, rgba(0,0,0,.58) 100%);
+  animation:none !important;
+}
+
+/* ---------- Feinschliff ---------- */
+/* Keine Weichzeichner auf Flaechen, das kostet nur Leistung */
+.host .stage,
+.host .panel,
+.host .card,
+.host .karte{
+  backdrop-filter:none;
+}
+
+/* Bewegung generell sparsam */
+@media (prefers-reduced-motion: reduce){
+  .host .stage::before,
+  .host .stage::after{
+    animation:none !important;
+  }
+}
