@@ -1,12 +1,16 @@
 /*
-  Host-Hintergrund: ruhig und statisch.
+  Host-Hintergrund: farbig, statisch, ohne Bewegung.
 
-  Ersetzt das animierte Partikelnetz durch eine feste Komposition:
-  weicher Farbschimmer in der Modusfarbe, feines Raster fuer Tiefe,
-  Vignette als Rahmen. Nichts davon bewegt sich.
+  Aufbau: drei weiche Farbzonen ueber einer dunklen Grundflaeche,
+  dazu eine Vignette als Rahmen. Kein Raster, keine Partikel,
+  keine Animation.
 
-  Aktions-Effekte (Buzzer, Joker, Punkte, Richtig/Falsch) laufen
-  ueber host-fx.js und werden hier NICHT angefasst.
+  Pro Modus werden im Kopf der Seite zwei Farben gesetzt:
+    --akzent-rgb   Hauptfarbe des Modus
+    --akzent2-rgb  Gegenfarbe fuer Tiefe
+
+  Aktions-Effekte (Buzzer, Joker, Punkte) laufen ueber host-fx.js
+  und werden hier NICHT angefasst.
 */
 
 /* ---------- Laufenden Hintergrund abschalten ---------- */
@@ -53,89 +57,29 @@
   animation:none !important;
 }
 
-/* ---------- Der neue Hintergrund ---------- */
-/*
-  --akzent-rgb wird pro Modus im Kopf der Seite gesetzt, als
-  Zahlentripel wie "0,229,199". So laesst sich die Deckkraft frei
-  steuern, ohne auf color-mix angewiesen zu sein.
-*/
+/* ---------- Der Hintergrund ---------- */
 .host body,
 body.host{
-  background-color:#080b14;
+  background-color:#0a0d16;
 }
 
 .host .stage{
   position:relative;
   isolation:isolate;
   background:
-    /* Schimmer oben in der Modusfarbe, sehr zurueckhaltend */
-    radial-gradient(120% 80% at 50% -10%,
-      rgba(var(--akzent-rgb, 74,127,208), .16) 0%,
-      rgba(var(--akzent-rgb, 74,127,208), 0) 58%),
-    /* Zweiter Schimmer unten fuer Tiefe */
-    radial-gradient(90% 60% at 50% 108%,
-      rgba(var(--akzent-rgb, 74,127,208), .09) 0%,
-      rgba(var(--akzent-rgb, 74,127,208), 0) 62%),
-    /* Grundflaeche */
-    linear-gradient(178deg, #101726 0%, #0a0f1b 52%, #070a12 100%)
+    radial-gradient(85% 70% at 22% 8%,
+      rgba(var(--akzent-rgb, 74,127,208), .30) 0%,
+      rgba(var(--akzent-rgb, 74,127,208), .10) 38%,
+      rgba(var(--akzent-rgb, 74,127,208), 0) 70%),
+    radial-gradient(80% 65% at 84% 88%,
+      rgba(var(--akzent2-rgb, 150,80,220), .26) 0%,
+      rgba(var(--akzent2-rgb, 150,80,220), .08) 42%,
+      rgba(var(--akzent2-rgb, 150,80,220), 0) 72%),
+    radial-gradient(70% 55% at 50% 45%,
+      rgba(255,255,255,.045) 0%,
+      rgba(255,255,255,0) 65%),
+    linear-gradient(165deg, #141b2e 0%, #0d1220 48%, #080b14 100%)
     !important;
-}
-
-/*
-  Quizduell hat kein .stage-Element, dort liegt der Hintergrund
-  direkt auf dem body. Gleiche Komposition, gleiche Wirkung.
-*/
-body.host:not(:has(.stage)){
-  background:
-    radial-gradient(120% 80% at 50% -10%,
-      rgba(var(--akzent-rgb, 74,127,208), .16) 0%,
-      rgba(var(--akzent-rgb, 74,127,208), 0) 58%),
-    radial-gradient(90% 60% at 50% 108%,
-      rgba(var(--akzent-rgb, 74,127,208), .09) 0%,
-      rgba(var(--akzent-rgb, 74,127,208), 0) 62%),
-    linear-gradient(178deg, #101726 0%, #0a0f1b 52%, #070a12 100%)
-    fixed !important;
-}
-
-body.host:not(:has(.stage))::before{
-  content:'';
-  position:fixed;
-  inset:0;
-  z-index:0;
-  pointer-events:none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.030) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.030) 1px, transparent 1px);
-  background-size:72px 72px;
-  -webkit-mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
-  mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
-}
-
-body.host:not(:has(.stage))::after{
-  content:'';
-  position:fixed;
-  inset:0;
-  z-index:0;
-  pointer-events:none;
-  background:
-    radial-gradient(ellipse 96% 88% at 50% 44%,
-      transparent 46%, rgba(0,0,0,.38) 82%, rgba(0,0,0,.58) 100%);
-}
-
-/* Feines Raster, nach aussen ausgeblendet */
-.host .stage::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  z-index:-2;
-  pointer-events:none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.030) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.030) 1px, transparent 1px);
-  background-size:72px 72px;
-  -webkit-mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
-  mask-image:radial-gradient(ellipse 78% 62% at 50% 42%, #000 12%, transparent 76%);
-  animation:none !important;
 }
 
 /* Vignette rahmt das Bild im Stream */
@@ -146,13 +90,49 @@ body.host:not(:has(.stage))::after{
   z-index:-1;
   pointer-events:none;
   background:
-    radial-gradient(ellipse 96% 88% at 50% 44%,
-      transparent 46%, rgba(0,0,0,.38) 82%, rgba(0,0,0,.58) 100%);
+    radial-gradient(ellipse 100% 92% at 50% 46%,
+      transparent 42%, rgba(0,0,0,.34) 80%, rgba(0,0,0,.56) 100%);
   animation:none !important;
 }
 
+/* Kein Rest vom alten Raster */
+.host .stage::before{
+  display:none !important;
+}
+
+/*
+  Quizduell hat kein .stage-Element, dort liegt der Hintergrund
+  direkt auf dem body.
+*/
+body.host:not(:has(.stage)){
+  background:
+    radial-gradient(85% 70% at 22% 8%,
+      rgba(var(--akzent-rgb, 74,127,208), .30) 0%,
+      rgba(var(--akzent-rgb, 74,127,208), .10) 38%,
+      rgba(var(--akzent-rgb, 74,127,208), 0) 70%),
+    radial-gradient(80% 65% at 84% 88%,
+      rgba(var(--akzent2-rgb, 150,80,220), .26) 0%,
+      rgba(var(--akzent2-rgb, 150,80,220), .08) 42%,
+      rgba(var(--akzent2-rgb, 150,80,220), 0) 72%),
+    radial-gradient(70% 55% at 50% 45%,
+      rgba(255,255,255,.045) 0%,
+      rgba(255,255,255,0) 65%),
+    linear-gradient(165deg, #141b2e 0%, #0d1220 48%, #080b14 100%)
+    fixed !important;
+}
+
+body.host:not(:has(.stage))::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 100% 92% at 50% 46%,
+      transparent 42%, rgba(0,0,0,.34) 80%, rgba(0,0,0,.56) 100%);
+}
+
 /* ---------- Feinschliff ---------- */
-/* Keine Weichzeichner auf Flaechen, das kostet nur Leistung */
 .host .stage,
 .host .panel,
 .host .card,
@@ -160,10 +140,6 @@ body.host:not(:has(.stage))::after{
   backdrop-filter:none;
 }
 
-/* Bewegung generell sparsam */
 @media (prefers-reduced-motion: reduce){
-  .host .stage::before,
-  .host .stage::after{
-    animation:none !important;
-  }
+  .host .stage::after{ animation:none !important; }
 }
