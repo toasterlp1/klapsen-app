@@ -1,9 +1,10 @@
-const CACHE_VERSION = 'qo-v26';
+const CACHE_VERSION = 'qo-v34';
 
 const PRECACHE = [
   './',
   './index.html',
   './manifest.json',
+  './hintergrund-host.css',
   './auth.js',
   './avatare.js',
   './zurueck.js',
