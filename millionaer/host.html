@@ -67,7 +67,9 @@
     font-weight:900;font-size:17px;letter-spacing:.5px;
     backdrop-filter:blur(6px);
   }
-  .pill .ic{font-size:15px;opacity:.85;}
+  .pill .ic{display:inline-flex;width:17px;height:17px;opacity:.9;color:var(--gold);}
+  .pill .ic svg{width:100%;height:100%;display:block;}
+  .joker .badge svg{width:100%;height:100%;display:block;}
 
   .jokers{
     position:relative;z-index:2;
@@ -215,6 +217,7 @@
     box-shadow:0 2px 8px rgba(0,0,0,.45);
     transition:opacity .3s, transform .3s;
   }
+  .p .jks span svg{width:14px;height:14px;display:block;}
   .jks .j5050{background:var(--gold);color:#3a2c00;}
   .jks .jspy{background:var(--spy);}
   .jks .jrisk{background:var(--risk);}
@@ -276,23 +279,23 @@
   <div class="top">
     <div class="logo">?WWM<span>?</span></div>
     <div class="pills">
-      <div class="pill"><span class="ic">🏁</span><span id="roundPill">Runde –</span></div>
-      <div class="pill"><span class="ic">⭐</span><span id="valPill">– Punkte</span></div>
+      <div class="pill"><span class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 4h13l-3 4 3 4H5z" fill="currentColor"/></svg></span><span id="roundPill">Runde –</span></div>
+      <div class="pill"><span class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.4l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.42l-5.1 2.68.97-5.68L3.75 9.4l5.7-.83L12 3.4Z" fill="currentColor"/></svg></span><span id="valPill">– Punkte</span></div>
     </div>
   </div>
 
   <div class="jokers">
     <div class="joker" data-j="5050" id="hj5050">
       <span class="who"></span>
-      <span class="in"><span class="badge">◑</span>50/50</span>
+      <span class="in"><span class="badge"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></span>50/50</span>
     </div>
     <div class="joker" data-j="spy" id="hjspy">
       <span class="who"></span>
-      <span class="in"><span class="badge">🕵</span>SPY</span>
+      <span class="in"><span class="badge"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg></span>SPY</span>
     </div>
     <div class="joker" data-j="risk" id="hjrisk">
       <span class="who"></span>
-      <span class="in"><span class="badge">🎲</span>RISK</span>
+      <span class="in"><span class="badge"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3.4" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="15" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="15" r="1.5" fill="currentColor"/></svg></span>RISK</span>
     </div>
   </div>
 
@@ -423,7 +426,11 @@ function render(){
     }
 
     const jk = ['5050','spy','risk'].map(t => {
-      const ico = { '5050':'◑', 'spy':'🕵', 'risk':'🎲' }[t];
+      const ico = {
+        '5050':'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
+        'spy':'<svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg>',
+        'risk':'<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3.4" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="15" r="1.6" fill="currentColor"/></svg>'
+      }[t];
       const jetzt = state.usedJoker && state.usedJoker.name === n && state.usedJoker.typ === t;
       const cls = ['j'+t];
       if(!p.jokers[t] && !jetzt) cls.push('spent');
