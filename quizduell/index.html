@@ -440,6 +440,8 @@ input,select{font-family:inherit}
 .host-buzz.armed{background:radial-gradient(circle at 38% 32%,#ff556f,var(--red) 60%);border-color:#ff8095;color:#fff;animation:armedPulse 1s infinite}
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../hintergrund-host.css" />
+<style>:root{ --akzent-rgb: 47,127,214; }</style>
 </head>
 <body>
 
@@ -455,7 +457,8 @@ input,select{font-family:inherit}
     return colors[0];
   }
   var box = document.getElementById('bgParticles');
-  var N = 40;
+  // Hintergrundpartikel abgeschaltet — Ruhe im Bild
+  var N = 0;
   for(var i=0;i<N;i++){
     var el = document.createElement('div');
     el.className = 'p';
@@ -725,7 +728,11 @@ async function generateAndStoreRound(){
 function chooseRole(role){
   ROLE = role;
   $("roleScreen").classList.add("hidden");
-  if(role==='host'){ $("hostView").classList.remove("hidden"); initHost(); }
+  if(role==='host'){
+    document.documentElement.classList.add('host');
+    document.body.classList.add('host');
+    $("hostView").classList.remove("hidden"); initHost();
+  }
   if(role==='master'){ $("masterView").classList.remove("hidden"); initMaster(); }
   if(role==='buzzer'){ $("buzzerView").classList.remove("hidden"); initBuzzer(); }
 }
@@ -1402,7 +1409,6 @@ function renderBuzzer(){
 </script>
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
-<script src="../hintergrund.js"></script>
 <script src="../buzzer-fx.js"></script>
 <script src="../host-fx.js"></script>
 <script src="../sound-toggle.js"></script>
