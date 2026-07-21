@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
+<script src="../host-fx.js"></script>
 <script src="../symbole.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
@@ -312,6 +313,8 @@
   .flash-overlay.steal .flash-name{color:var(--bad);text-shadow:0 0 44px rgba(255,56,96,.75);}
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../hintergrund-host.css" />
+<style>:root{ --akzent-rgb: 0,229,199; }</style>
 </head>
 <body class="host">
 <div class="stage" id="stage">
@@ -565,6 +568,5 @@ sb.channel('cd_state_channel')
 </script>
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
-<script src="../hintergrund.js"></script>
 </body>
 </html>
