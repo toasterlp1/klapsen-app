@@ -54,19 +54,15 @@
     display:flex;flex-direction:column;align-items:center;padding:2.6vh calc(2 * var(--u)) 2.8vh;
   }
 
-  .header{display:flex;flex-direction:column;align-items:center;margin-bottom:1.6vh;animation:riseIn .6s var(--ease-out) both;}
+  .header{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:calc(1 * var(--u));margin-bottom:1.6vh;animation:riseIn .6s var(--ease-out) both;}
+  .logo-gauge{width:calc(4.4 * var(--u));height:calc(4.4 * var(--u));flex-shrink:0;filter:drop-shadow(0 0 14px rgba(255,209,102,.55));}
   .title{
-    font-family:'Anton',sans-serif;font-size:calc(3 * var(--u));letter-spacing:5px;line-height:1;
-    background:linear-gradient(180deg,#eaf2ff 0%, var(--accent) 45%, var(--hot) 100%);
+    font-family:'Anton',sans-serif;font-size:calc(4 * var(--u));letter-spacing:2px;line-height:1;
+    background:linear-gradient(180deg,#8dff9e 0%, #2fe04f 55%, #16a832 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 20px rgba(0,229,199,.4));
+    filter:drop-shadow(0 0 22px rgba(47,224,79,.55));
   }
-  .title-rule{width:calc(12 * var(--u));height:4px;border-radius:3px;margin-top:1vh;
-    background:linear-gradient(90deg, var(--cold), var(--warm), var(--hot));
-    box-shadow:0 0 16px rgba(255,56,96,.4);position:relative;overflow:hidden;}
-  .title-rule::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:sweep 2.8s var(--ease) infinite;}
-  @keyframes sweep{0%{left:-40%;}100%{left:120%;}}
+  .title-rule{display:none;}
 
   .topbar{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1560px;margin-bottom:1.6vh;animation:riseIn .6s var(--ease-out) .08s both;}
   .info-pill{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:14px;padding:.9vh calc(1.4 * var(--u));min-width:calc(9 * var(--u));}
@@ -151,8 +147,9 @@
     border:2px solid var(--border);padding:2vh calc(2 * var(--u));text-align:center;
     animation:riseIn .6s var(--ease-out) .18s both;
   }
-  .hint-label{font-size:calc(.7 * var(--u));letter-spacing:3px;color:var(--muted);text-transform:uppercase;font-weight:800;margin-bottom:1vh;}
-  .hint-word{font-family:'Anton',sans-serif;font-size:calc(2.8 * var(--u));color:#fff;line-height:1;transition:opacity .3s;}
+  .hint-label{font-size:calc(1.5 * var(--u));letter-spacing:.5px;color:#fff;text-transform:none;font-weight:800;margin-bottom:0;font-family:'Anton',sans-serif;}
+  .hint-box{display:flex;align-items:center;justify-content:center;gap:calc(.8 * var(--u));}
+  .hint-word{font-family:'Anton',sans-serif;font-size:calc(1.9 * var(--u));color:#b58cff;line-height:1;transition:opacity .3s;text-shadow:0 0 18px rgba(181,140,255,.6);}
   .hint-word.pop{animation:wordPop .5s var(--ease-out);}
   @keyframes wordPop{0%{transform:scale(.8);opacity:0;}60%{transform:scale(1.06);}100%{transform:scale(1);opacity:1;}}
 
@@ -190,8 +187,17 @@
     72%{transform:translate(-50%,-50%) scale(.92) rotate(-3deg);}
     100%{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1;}
   }
-  .scale-nums{display:flex;justify-content:space-between;margin:1.4vh calc(1 * var(--u)) 0;}
-  .scale-nums span{font-family:'Anton',sans-serif;font-size:calc(1.1 * var(--u));color:var(--muted);transition:opacity .3s;}
+  .scale-nums{display:flex;justify-content:space-between;margin:1.8vh calc(.4 * var(--u)) 0;}
+  .scale-nums span{
+    font-family:'Anton',sans-serif;font-size:calc(1.15 * var(--u));color:var(--ink);
+    width:calc(2.9 * var(--u));height:calc(2.9 * var(--u));border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,#1b2440,#141b30);
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:0 3px 10px -3px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
+    transition:opacity .3s, transform .3s var(--ease), box-shadow .3s;
+  }
+  .scale-nums span.cut{opacity:.22;filter:grayscale(1);transform:scale(.86);}
 
   .awaiting-box{
     text-align:center;padding:1.6vh;border-radius:16px;background:rgba(0,229,199,.06);border:1px solid rgba(0,229,199,.3);
@@ -217,8 +223,19 @@
 
 <div class="stage">
   <div class="header">
+    <svg class="logo-gauge" viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <linearGradient id="gaugeArc" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#3a7bff"/>
+          <stop offset="50%" stop-color="#ffd166"/>
+          <stop offset="100%" stop-color="#ff3860"/>
+        </linearGradient>
+      </defs>
+      <path d="M6 44 A26 26 0 0 1 58 44" fill="none" stroke="url(#gaugeArc)" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="32" cy="44" r="4.5" fill="#eef1f8"/>
+      <line x1="32" y1="44" x2="46" y2="27" stroke="#eef1f8" stroke-width="4" stroke-linecap="round"/>
+    </svg>
     <div class="title">HOTZONE</div>
-    <div class="title-rule"></div>
   </div>
 
   <div class="topbar">
@@ -236,11 +253,11 @@
 
     <div class="center-panel">
       <div class="hint-box">
-        <div class="hint-label">Hinweiswort</div>
-        <div class="hint-word" id="hintWordVal">—</div>
+        <div class="hint-label">Hint Word:</div>
+        <div class="hint-word" id="hintWordVal">WAITING…</div>
       </div>
       <div class="scale-box">
-        <div class="scale-ends"><span class="cold" id="scaleLeft">—</span><span class="hot" id="scaleRight">—</span></div>
+        <div class="scale-ends"><span class="cold" id="scaleLeft">NIEDRIG</span><span class="hot" id="scaleRight">HOCH</span></div>
         <div class="scale-track">
           <div class="hotzone-glow" id="hotzoneGlow"></div>
           <div class="marker" id="marker"></div>
@@ -371,21 +388,21 @@ function render(){
 
   const cat = categoryIndex!=null ? CATEGORIES[categoryIndex] : null;
   document.getElementById('catVal').textContent = cat ? cat.category : '—';
-  document.getElementById('scaleLeft').textContent = cat ? cat.left : '—';
-  document.getElementById('scaleRight').textContent = cat ? cat.right : '—';
+  document.getElementById('scaleLeft').textContent = cat ? cat.left : 'NIEDRIG';
+  document.getElementById('scaleRight').textContent = cat ? cat.right : 'HOCH';
 
   const hintEl = document.getElementById('hintWordVal');
-  const neuesHint = phase==='clue' || phase==='idle' ? '—' : (hintWord || '—');
+  const neuesHint = phase==='clue' || phase==='idle' ? 'WAITING…' : (hintWord || 'WAITING…');
   if(neuesHint !== letztesHint){
     hintEl.textContent = neuesHint;
-    if(neuesHint !== '—'){ hintEl.classList.remove('pop'); void hintEl.offsetWidth; hintEl.classList.add('pop'); }
+    if(neuesHint !== 'WAITING…'){ hintEl.classList.remove('pop'); void hintEl.offsetWidth; hintEl.classList.add('pop'); }
     letztesHint = neuesHint;
   }
 
   const scaleNums = document.getElementById('scaleNums');
   scaleNums.innerHTML = Array.from({length:10},(_, i)=>i+1).map(n=>{
     const greyed = greyedNumbers.includes(n);
-    return `<span style="${greyed?'opacity:.2;':''}">${n}</span>`;
+    return `<span class="${greyed?'cut':''}">${n}</span>`;
   }).join('');
 
   const marker = document.getElementById('marker');
