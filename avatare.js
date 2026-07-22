@@ -3,7 +3,7 @@ const AVATARE = {
   "säule": "https://cdn.discordapp.com/avatars/514145088822181908/86c56c968daead276bd60db8473249ce.webp?size=256",
   "ügelibügeli": "https://cdn.discordapp.com/avatars/758271488045350912/12300b63fc57de58b01a3a3408a21f80.webp?size=256",
   "cijäy": "https://cdn.discordapp.com/avatars/756944039160578129/b27f04ad8e3d620d1a0760ac277e6543.webp?size=256",
-  "töbi": "https://discord.com/assets/788f05731f8aa02e.png",
+  "töbi": "https://cdn.discordapp.com/avatars/205076563593527297/0956f387e30864f0b795d99c8d1ff34b.webp?size=256",
   "sämöä": "https://cdn.discordapp.com/avatars/766392871396835381/d0603e4212397934c072b5b910be0d83.webp?size=256",
   "künze": "https://cdn.discordapp.com/avatars/382635436419317773/d8d6f0a300add7455e205f326932a059.webp?size=256",
   "timäy": "https://cdn.discordapp.com/avatars/1147184433078738994/c898d519b767d59b265d3d06aba1cfbd.webp?size=256",
