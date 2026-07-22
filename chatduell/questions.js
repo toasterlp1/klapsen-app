@@ -1,503 +1,513 @@
 
 const QUESTIONS = [
   {
-    frage: "Nenne ein ungewöhnliches Haustier",
+    frage: "Nenne etwas, das du sofort machst, wenn du allein zuhause bist",
     antworten: [
-      { text: "Schlange", punkte: 44 },
-      { text: "Spinne", punkte: 21 },
-      { text: "Schildkröte", punkte: 15 },
-      { text: "Schwein", punkte: 11 },
-      { text: "Skorpion", punkte: 5 },
+      { text: "Laut Musik hören und mitsingen", punkte: 38 },
+      { text: "In Unterhose rumlaufen", punkte: 24 },
+      { text: "Snacks essen ohne Teller", punkte: 16 },
+      { text: "Mit sich selbst reden", punkte: 12 },
+      { text: "Vor dem Spiegel tanzen", punkte: 10 },
     ]
   },
   {
-    frage: "Nenne etwas, das man nicht mit ins Flugzeug nehmen darf",
+    frage: "Nenne die schlechteste Ausrede, um nicht zocken zu kommen",
     antworten: [
-      { text: "Messer", punkte: 40 },
-      { text: "Flüssigkeiten über 100ml", punkte: 25 },
-      { text: "Feuerzeug", punkte: 15 },
-      { text: "Schere", punkte: 12 },
-      { text: "Waffen", punkte: 8 },
+      { text: "Mein Internet ist kaputt", punkte: 35 },
+      { text: "Ich muss früh raus", punkte: 26 },
+      { text: "Meine Mutter ruft", punkte: 18 },
+      { text: "Ich bin müde", punkte: 13 },
+      { text: "Mein Akku ist leer", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne einen Grund, warum jemand zu spät zur Arbeit kommt",
+    frage: "Nenne etwas, das jeder schon mal gegoogelt und sofort gelöscht hat",
     antworten: [
-      { text: "Verschlafen", punkte: 38 },
-      { text: "Stau", punkte: 28 },
-      { text: "Zug verpasst", punkte: 18 },
-      { text: "Auto sprang nicht an", punkte: 10 },
-      { text: "Wecker nicht gestellt", punkte: 6 },
+      { text: "Symptome einer Krankheit", punkte: 41 },
+      { text: "Wie alt ist ein Promi", punkte: 21 },
+      { text: "Eine peinliche Körperfrage", punkte: 17 },
+      { text: "Den Ex stalken", punkte: 13 },
+      { text: "Wie man ein Wort schreibt", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man in einem Hotelzimmer findet",
+    frage: "Nenne etwas im Kühlschrank, das man nicht mehr identifizieren kann",
     antworten: [
-      { text: "Benutztes Kondom", punkte: 35 },
-      { text: "Kleidung von anderen Leuten", punkte: 25 },
-      { text: "Zahnbürste", punkte: 20 },
-      { text: "Safe", punkte: 12 },
-      { text: "Bibel in der Schublade", punkte: 8 },
+      { text: "Reste in einer Tupperdose", punkte: 39 },
+      { text: "Schimmeliges Gemüse", punkte: 23 },
+      { text: "Eine offene Sauce", punkte: 17 },
+      { text: "Käse mit Pelz", punkte: 13 },
+      { text: "Irgendwas Braunes", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne einen Beruf, bei dem man Uniform trägt",
+    frage: "Nenne etwas, das man macht, wenn der Lehrer kurz rausgeht",
     antworten: [
-      { text: "Polizist", punkte: 40 },
-      { text: "Feuerwehrmann", punkte: 25 },
-      { text: "Pilot", punkte: 15 },
-      { text: "Koch", punkte: 12 },
-      { text: "Soldat", punkte: 8 },
+      { text: "Sofort laut losreden", punkte: 37 },
+      { text: "Ans Handy gehen", punkte: 27 },
+      { text: "Aufstehen und rumlaufen", punkte: 16 },
+      { text: "Was an die Tafel malen", punkte: 12 },
+      { text: "Schnell abschreiben", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das explodieren kann",
+    frage: "Nenne den nervigsten Mitspieler-Typ in einem Online-Game",
     antworten: [
-      { text: "Bombe", punkte: 35 },
-      { text: "Gasflasche", punkte: 25 },
-      { text: "Vulkan", punkte: 20 },
-      { text: "Feuerwerk", punkte: 12 },
-      { text: "Akku/Handy", punkte: 8 },
+      { text: "Der Rager, der alle flamed", punkte: 34 },
+      { text: "Der AFK-Typ", punkte: 24 },
+      { text: "Der Besserwisser im Voice", punkte: 19 },
+      { text: "Der Camper", punkte: 14 },
+      { text: "Der mit offenem Mikro", punkte: 9 },
     ]
   },
   {
-    frage: "Nenne ein Land, in das viele Leute in den Ferien reisen",
+    frage: "Nenne etwas, das man tut, um beschäftigt auszusehen",
     antworten: [
-      { text: "Japan", punkte: 35 },
-      { text: "Italien", punkte: 25 },
-      { text: "Türkei", punkte: 18 },
-      { text: "Griechenland", punkte: 12 },
-      { text: "Thailand", punkte: 10 },
+      { text: "Auf den Bildschirm starren", punkte: 36 },
+      { text: "Mit Papieren rascheln", punkte: 22 },
+      { text: "Schnell tippen ohne Inhalt", punkte: 20 },
+      { text: "Ernst telefonieren", punkte: 13 },
+      { text: "Konzentriert nicken", punkte: 9 },
     ]
   },
   {
-    frage: "Nenne etwas, das Kinder ihren Eltern oft verschweigen",
+    frage: "Nenne etwas, das man im Discord-Call macht, während die anderen reden",
     antworten: [
-      { text: "Schlechte Noten", punkte: 38 },
-      { text: "Rauchen", punkte: 24 },
-      { text: "Beziehung", punkte: 18 },
-      { text: "Party", punkte: 12 },
-      { text: "Kaputtes Handy", punkte: 8 },
+      { text: "Am Handy scrollen", punkte: 40 },
+      { text: "Ein anderes Spiel zocken", punkte: 24 },
+      { text: "Essen", punkte: 16 },
+      { text: "Nichts, einfach auf mute", punkte: 12 },
+      { text: "Ins Leere starren", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne einen Grund, nachts wach zu bleiben",
+    frage: "Nenne etwas, das dir peinlich wäre, wenn deine Mutter es auf deinem Handy findet",
     antworten: [
-      { text: "Social Media scrollen", punkte: 40 },
-      { text: "Serie schauen", punkte: 25 },
-      { text: "Gaming", punkte: 18 },
-      { text: "Mit Freunden chatten", punkte: 10 },
-      { text: "Videos schauen", punkte: 7 },
+      { text: "Der Suchverlauf", punkte: 42 },
+      { text: "Screenshots aus dem Chat", punkte: 21 },
+      { text: "Fotos vom Wochenende", punkte: 16 },
+      { text: "Alte Sprachnachrichten", punkte: 12 },
+      { text: "Die Bildschirmzeit", punkte: 9 },
     ]
   },
   {
-    frage: "Nenne etwas, das man auf einem Bauernhof findet",
+    frage: "Nenne etwas, das man verspricht und nie einhält",
     antworten: [
-      { text: "Kuh", punkte: 35 },
-      { text: "Traktor", punkte: 25 },
-      { text: "Huhn", punkte: 20 },
-      { text: "Scheune", punkte: 12 },
-      { text: "Schwein", punkte: 8 },
+      { text: "Ich fang morgen mit Sport an", punkte: 38 },
+      { text: "Nur noch eine Runde", punkte: 25 },
+      { text: "Ich geh gleich schlafen", punkte: 18 },
+      { text: "Ich zahl's dir zurück", punkte: 11 },
+      { text: "Ich meld mich", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne einen Grund für einen Beziehungsstreit",
+    frage: "Nenne etwas, das man macht, wenn man den Namen vergessen hat",
     antworten: [
-      { text: "Eifersucht", punkte: 32 },
-      { text: "Geld", punkte: 25 },
-      { text: "Haushalt", punkte: 20 },
-      { text: "Zu wenig Zeit füreinander", punkte: 14 },
-      { text: "Handy-Kontrolle", punkte: 9 },
+      { text: "Alter oder Digga sagen", punkte: 39 },
+      { text: "Ausweichen und nuscheln", punkte: 24 },
+      { text: "Jemand anderen fragen", punkte: 17 },
+      { text: "Auf Instagram nachschauen", punkte: 12 },
+      { text: "Einfach raten", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das im Kühlschrank abläuft, bevor man's isst",
+    frage: "Nenne etwas, das man nur macht, wenn niemand zuschaut",
     antworten: [
-      { text: "Milch", punkte: 35 },
-      { text: "Joghurt", punkte: 25 },
-      { text: "Resteessen", punkte: 20 },
-      { text: "Gemüse", punkte: 12 },
-      { text: "Fleisch", punkte: 8 },
+      { text: "In der Nase bohren", punkte: 35 },
+      { text: "Essen vom Boden essen", punkte: 24 },
+      { text: "Am Shirt riechen", punkte: 19 },
+      { text: "Mit sich selbst reden", punkte: 14 },
+      { text: "Grimassen im Spiegel", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne ein Tier, vor dem viele Menschen Angst haben",
+    frage: "Nenne den schlimmsten Fehler beim ersten Date",
     antworten: [
-      { text: "Spinne", punkte: 40 },
-      { text: "Schlange", punkte: 28 },
-      { text: "Hai", punkte: 15 },
-      { text: "Ratte", punkte: 10 },
-      { text: "Wespe", punkte: 7 },
+      { text: "Nur über sich selbst reden", punkte: 37 },
+      { text: "Am Handy hängen", punkte: 25 },
+      { text: "Über den Ex reden", punkte: 18 },
+      { text: "Zu spät kommen", punkte: 12 },
+      { text: "Nicht zahlen wollen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man beim Camping vergisst",
+    frage: "Nenne etwas, das im Kinderzimmer von jedem 2000er-Kind stand",
     antworten: [
-      { text: "Zahnbürste", punkte: 30 },
-      { text: "Powerbank/Ladekabel", punkte: 25 },
-      { text: "Sonnencreme", punkte: 20 },
-      { text: "Taschenlampe", punkte: 15 },
-      { text: "Insektenspray", punkte: 10 },
+      { text: "Ein Hochbett", punkte: 33 },
+      { text: "Poster an der Wand", punkte: 26 },
+      { text: "Eine Lavalampe", punkte: 18 },
+      { text: "Ein Röhrenfernseher", punkte: 14 },
+      { text: "Ein Sparschwein", punkte: 9 },
     ]
   },
   {
-    frage: "Nenne einen Ort, an dem man leise sein sollte",
+    frage: "Nenne etwas, das man sagt, wenn man keine Ahnung hat, aber mitreden will",
     antworten: [
-      { text: "Bibliothek", punkte: 40 },
-      { text: "Kino", punkte: 25 },
-      { text: "Krankenhaus", punkte: 15 },
-      { text: "Kirche", punkte: 12 },
-      { text: "Schlafzimmer nachts", punkte: 8 },
+      { text: "Ja genau, voll", punkte: 36 },
+      { text: "Kommt drauf an", punkte: 25 },
+      { text: "Hab ich auch gehört", punkte: 19 },
+      { text: "Interessant", punkte: 12 },
+      { text: "Ist halt so", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man in einer Notfalltasche haben sollte",
+    frage: "Nenne etwas, das jeder in seinem Zimmer versteckt hat",
     antworten: [
-      { text: "Verbandszeug", punkte: 35 },
-      { text: "Taschenlampe", punkte: 25 },
-      { text: "Wasser", punkte: 20 },
-      { text: "Powerbank", punkte: 12 },
-      { text: "Medikamente", punkte: 8 },
+      { text: "Geld", punkte: 34 },
+      { text: "Alte Fotos oder Briefe", punkte: 24 },
+      { text: "Süssigkeiten", punkte: 20 },
+      { text: "Kram aus der Kindheit", punkte: 13 },
+      { text: "Kabel, die zu nichts gehören", punkte: 9 },
     ]
   },
   {
-    frage: "Nenne eine Ausrede, um eine Party früh zu verlassen",
+    frage: "Nenne etwas, das man beim Kochen falsch machen kann",
     antworten: [
-      { text: "Muss früh raus/arbeiten", punkte: 35 },
-      { text: "Kopfschmerzen", punkte: 25 },
-      { text: "Müde", punkte: 20 },
-      { text: "Letzter Zug/Bus", punkte: 12 },
-      { text: "Haustier allein zuhause", punkte: 8 },
+      { text: "Alles anbrennen lassen", punkte: 38 },
+      { text: "Zu viel Salz", punkte: 26 },
+      { text: "Die Zeit vergessen", punkte: 16 },
+      { text: "Eine Zutat weglassen", punkte: 12 },
+      { text: "Sich schneiden", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das teurer ist, als man denkt",
+    frage: "Nenne etwas, das man nach drei Sekunden bereut, geschrieben zu haben",
     antworten: [
-      { text: "Hochzeit", punkte: 30 },
-      { text: "Auto (Unterhalt)", punkte: 25 },
-      { text: "Wohnung/Miete", punkte: 20 },
-      { text: "Kinder", punkte: 15 },
-      { text: "Studium", punkte: 10 },
+      { text: "Eine Sprachnachricht nachts", punkte: 35 },
+      { text: "Die ehrliche Meinung", punkte: 25 },
+      { text: "Eine Nachricht an den Ex", punkte: 20 },
+      { text: "Was in die falsche Gruppe", punkte: 12 },
+      { text: "Ein Emoji zu viel", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man nach dem Sport als erstes macht",
+    frage: "Nenne etwas, das alle in der Schule gehasst haben",
     antworten: [
-      { text: "Duschen", punkte: 40 },
-      { text: "Trinken", punkte: 25 },
-      { text: "Essen", punkte: 15 },
-      { text: "Dehnen", punkte: 12 },
-      { text: "Aufs Handy schauen", punkte: 8 },
+      { text: "Mathe", punkte: 36 },
+      { text: "Früh aufstehen", punkte: 25 },
+      { text: "Referate halten", punkte: 19 },
+      { text: "Sportunterricht", punkte: 12 },
+      { text: "Das Mittagessen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne einen Film, den fast jeder gesehen hat",
+    frage: "Nenne etwas, das man macht, wenn das WLAN ausfällt",
     antworten: [
-      { text: "Titanic", punkte: 30 },
-      { text: "Der König der Löwen", punkte: 25 },
-      { text: "Harry Potter", punkte: 20 },
-      { text: "Star Wars", punkte: 15 },
-      { text: "Avengers", punkte: 10 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das man im Kühlschrank vergisst",
-    antworten: [
-      { text: "Joghurt", punkte: 32 },
-      { text: "Reste vom Vortag", punkte: 27 },
-      { text: "Gemüse", punkte: 19 },
-      { text: "Senf oder Sauce", punkte: 14 },
-      { text: "Ein Getränk", punkte: 8 },
-    ]
-  },
-  {
-    frage: "Nenne eine Ausrede für Zuspätkommen",
-    antworten: [
-      { text: "Stau", punkte: 35 },
-      { text: "Verschlafen", punkte: 26 },
-      { text: "Zug hatte Verspätung", punkte: 20 },
-      { text: "Wecker hat nicht geklingelt", punkte: 12 },
-      { text: "Parkplatz gesucht", punkte: 7 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das jeder in der Schublade hat, aber nie benutzt",
-    antworten: [
-      { text: "Alte Kabel", punkte: 30 },
-      { text: "Batterien", punkte: 24 },
-      { text: "Bedienungsanleitungen", punkte: 20 },
-      { text: "Schlüssel ohne Schloss", punkte: 15 },
-      { text: "Kerzen", punkte: 11 },
-    ]
-  },
-  {
-    frage: "Nenne ein Tier, das man nicht streicheln sollte",
-    antworten: [
-      { text: "Igel", punkte: 28 },
-      { text: "Skorpion", punkte: 23 },
-      { text: "Wildschwein", punkte: 21 },
-      { text: "Schlange", punkte: 16 },
-      { text: "Qualle", punkte: 12 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das beim Camping garantiert schiefgeht",
-    antworten: [
-      { text: "Es regnet", punkte: 33 },
-      { text: "Zelt falsch aufgebaut", punkte: 25 },
-      { text: "Etwas vergessen", punkte: 19 },
-      { text: "Mücken", punkte: 14 },
-      { text: "Feuer geht nicht an", punkte: 9 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das man macht, wenn niemand zusieht",
-    antworten: [
-      { text: "Singen", punkte: 31 },
-      { text: "Tanzen", punkte: 24 },
-      { text: "Mit sich selbst reden", punkte: 21 },
-      { text: "Direkt aus der Packung essen", punkte: 15 },
-      { text: "In den Spiegel schauen", punkte: 9 },
-    ]
-  },
-  {
-    frage: "Nenne einen Grund, warum man ein Telefonat beendet",
-    antworten: [
-      { text: "Keine Zeit mehr", punkte: 29 },
-      { text: "Akku leer", punkte: 25 },
-      { text: "Schlechter Empfang", punkte: 22 },
-      { text: "Jemand steht vor der Tür", punkte: 15 },
-      { text: "Essen ist fertig", punkte: 9 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das in jedem Auto herumliegt",
-    antworten: [
-      { text: "Leere Flaschen", punkte: 27 },
-      { text: "Ladekabel", punkte: 24 },
-      { text: "Parkscheine", punkte: 20 },
-      { text: "Kratzer-Eiskratzer", punkte: 17 },
-      { text: "Sonnenbrille", punkte: 12 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das Kinder besser können als Erwachsene",
-    antworten: [
-      { text: "Handy bedienen", punkte: 34 },
-      { text: "Sich Dinge merken", punkte: 24 },
-      { text: "Fragen stellen", punkte: 18 },
-      { text: "Unbefangen sein", punkte: 15 },
-      { text: "Sich verbiegen", punkte: 9 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das man aus dem Hotel mitnimmt",
-    antworten: [
-      { text: "Shampoo", punkte: 38 },
-      { text: "Seife", punkte: 26 },
-      { text: "Handtuch", punkte: 16 },
-      { text: "Kugelschreiber", punkte: 12 },
-      { text: "Hausschuhe", punkte: 8 },
-    ]
-  },
-  {
-    frage: "Nenne einen Beruf, den Kinder cool finden",
-    antworten: [
-      { text: "Feuerwehrmann", punkte: 30 },
-      { text: "Polizist", punkte: 24 },
-      { text: "Astronaut", punkte: 20 },
-      { text: "Tierarzt", punkte: 15 },
-      { text: "Youtuber", punkte: 11 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das man nie zurückbekommt, wenn man es verleiht",
-    antworten: [
-      { text: "Bücher", punkte: 31 },
-      { text: "Kugelschreiber", punkte: 26 },
-      { text: "Geld", punkte: 21 },
-      { text: "Feuerzeug", punkte: 14 },
-      { text: "Werkzeug", punkte: 8 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das im Winter nervt",
-    antworten: [
-      { text: "Auto freikratzen", punkte: 29 },
-      { text: "Frühe Dunkelheit", punkte: 25 },
-      { text: "Kälte", punkte: 20 },
-      { text: "Nasse Schuhe", punkte: 15 },
-      { text: "Erkältung", punkte: 11 },
-    ]
-  },
-  {
-    frage: "Nenne etwas, das man auf einer Insel bräuchte",
-    antworten: [
-      { text: "Wasser", punkte: 36 },
-      { text: "Messer", punkte: 24 },
-      { text: "Feuerzeug", punkte: 18 },
-      { text: "Essen", punkte: 13 },
-      { text: "Sonnenschutz", punkte: 9 },
-    ]
-  },
-  {
-    frage: "Nenne einen Film, den fast jeder gesehen hat",
-    antworten: [
-      { text: "Titanic", punkte: 28 },
-      { text: "Herr der Ringe", punkte: 23 },
-      { text: "Harry Potter", punkte: 21 },
-      { text: "Der König der Löwen", punkte: 16 },
-      { text: "Avatar", punkte: 12 },
+      { text: "Router neu starten", punkte: 41 },
+      { text: "Mobile Daten anmachen", punkte: 24 },
+      { text: "Fluchen", punkte: 16 },
+      { text: "Alle im Haus anschreien", punkte: 11 },
+      { text: "Rausgehen", punkte: 8 },
     ]
   },
   {
     frage: "Nenne etwas, das man im Supermarkt kauft, obwohl man es nicht braucht",
     antworten: [
-      { text: "Süssigkeiten", punkte: 33 },
+      { text: "Süssigkeiten", punkte: 37 },
       { text: "Chips", punkte: 25 },
-      { text: "Angebote", punkte: 19 },
-      { text: "Getränke", punkte: 13 },
-      { text: "Zeitschriften", punkte: 10 },
+      { text: "Irgendwas im Angebot", punkte: 18 },
+      { text: "Energy Drinks", punkte: 12 },
+      { text: "Noch eine Sauce", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man in der Schule gelernt hat und nie braucht",
+    frage: "Nenne den peinlichsten Moment im Sportunterricht",
     antworten: [
-      { text: "Kurvendiskussion", punkte: 30 },
-      { text: "Gedichtanalyse", punkte: 25 },
-      { text: "Latein", punkte: 20 },
-      { text: "Bundesländer auswendig", punkte: 15 },
-      { text: "Schönschrift", punkte: 10 },
+      { text: "Als Letzter gewählt werden", punkte: 39 },
+      { text: "Vor allen hinfallen", punkte: 24 },
+      { text: "Den Ball ins Gesicht", punkte: 18 },
+      { text: "Beim Umziehen gesehen werden", punkte: 11 },
+      { text: "Nicht über den Bock kommen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das laut ist",
+    frage: "Nenne etwas, das man tut, wenn man nachts Hunger hat",
     antworten: [
-      { text: "Presslufthammer", punkte: 29 },
-      { text: "Feuerwerk", punkte: 24 },
-      { text: "Flugzeug", punkte: 21 },
-      { text: "Staubsauger", punkte: 16 },
-      { text: "Rasenmäher", punkte: 10 },
+      { text: "Zum Kühlschrank schleichen", punkte: 42 },
+      { text: "Was bestellen", punkte: 22 },
+      { text: "Chips aus dem Schrank", punkte: 17 },
+      { text: "Weiterschlafen versuchen", punkte: 11 },
+      { text: "Wasser trinken", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man am Sonntag macht",
+    frage: "Nenne etwas, das man im Auto macht, wenn man allein ist",
     antworten: [
-      { text: "Ausschlafen", punkte: 32 },
-      { text: "Spazieren", punkte: 25 },
-      { text: "Familie besuchen", punkte: 19 },
-      { text: "Kochen", punkte: 14 },
-      { text: "Nichts", punkte: 10 },
+      { text: "Laut mitsingen", punkte: 44 },
+      { text: "Mit sich selbst reden", punkte: 20 },
+      { text: "Zu schnell fahren", punkte: 16 },
+      { text: "Andere Fahrer beschimpfen", punkte: 12 },
+      { text: "Aufs Lenkrad trommeln", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das jeder falsch ausspricht",
+    frage: "Nenne etwas, das jeder Gamer schon mal aus Wut gemacht hat",
     antworten: [
-      { text: "Croissant", punkte: 27 },
-      { text: "Nutella", punkte: 24 },
-      { text: "Gnocchi", punkte: 22 },
-      { text: "Espresso", punkte: 16 },
-      { text: "Jalapeño", punkte: 11 },
+      { text: "Controller werfen", punkte: 36 },
+      { text: "Ins Mikro schreien", punkte: 26 },
+      { text: "Das Spiel deinstallieren", punkte: 18 },
+      { text: "Auf den Tisch hauen", punkte: 12 },
+      { text: "Den PC ausmachen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das in der Handtasche verschwindet",
+    frage: "Nenne etwas, das man sagt, wenn man beim Lügen erwischt wird",
     antworten: [
-      { text: "Schlüssel", punkte: 34 },
-      { text: "Handy", punkte: 26 },
-      { text: "Lippenstift", punkte: 18 },
-      { text: "Kopfhörer", punkte: 13 },
-      { text: "Kassenzettel", punkte: 9 },
+      { text: "War nur ein Witz", punkte: 35 },
+      { text: "Hab ich nie gesagt", punkte: 26 },
+      { text: "Du hast das falsch verstanden", punkte: 19 },
+      { text: "Okay, ich geb's zu", punkte: 12 },
+      { text: "Wer sagt das", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne einen Grund, warum man nicht schlafen kann",
+    frage: "Nenne etwas, das man mit 30 nicht mehr machen sollte, aber trotzdem macht",
     antworten: [
-      { text: "Gedanken kreisen", punkte: 31 },
-      { text: "Zu warm", punkte: 23 },
-      { text: "Lärm", punkte: 20 },
-      { text: "Handy", punkte: 16 },
-      { text: "Kaffee am Abend", punkte: 10 },
+      { text: "Bis 4 Uhr zocken", punkte: 34 },
+      { text: "Fertigpizza essen", punkte: 25 },
+      { text: "Saufen wie mit 18", punkte: 19 },
+      { text: "Alles aufschieben", punkte: 14 },
+      { text: "Mama die Wäsche machen lassen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man beim ersten Date nicht tun sollte",
+    frage: "Nenne etwas, das man tut, wenn eine unbekannte Nummer anruft",
     antworten: [
-      { text: "Über den Ex reden", punkte: 35 },
-      { text: "Aufs Handy schauen", punkte: 26 },
-      { text: "Zu spät kommen", punkte: 18 },
-      { text: "Nur über sich reden", punkte: 13 },
-      { text: "Rechnung teilen diskutieren", punkte: 8 },
+      { text: "Nicht rangehen", punkte: 45 },
+      { text: "Die Nummer googeln", punkte: 22 },
+      { text: "Rangehen und nichts sagen", punkte: 15 },
+      { text: "Blockieren", punkte: 10 },
+      { text: "Sofort auflegen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das im Keller steht und nie benutzt wird",
+    frage: "Nenne den nervigsten Satz, den Eltern sagen",
     antworten: [
-      { text: "Fitnessgerät", punkte: 30 },
-      { text: "Alte Möbel", punkte: 25 },
-      { text: "Kartons", punkte: 21 },
-      { text: "Fahrrad", punkte: 14 },
-      { text: "Farbeimer", punkte: 10 },
+      { text: "Solange du hier wohnst", punkte: 33 },
+      { text: "Räum dein Zimmer auf", punkte: 27 },
+      { text: "Handy weg beim Essen", punkte: 18 },
+      { text: "Frag deinen Vater", punkte: 13 },
+      { text: "Wir reden später", punkte: 9 },
     ]
   },
   {
-    frage: "Nenne etwas, das man macht, wenn der Strom ausfällt",
+    frage: "Nenne etwas, worüber es in einer WG immer Streit gibt",
     antworten: [
-      { text: "Kerzen anzünden", punkte: 36 },
-      { text: "Taschenlampe suchen", punkte: 25 },
-      { text: "Sicherung prüfen", punkte: 18 },
-      { text: "Nachbarn fragen", punkte: 12 },
-      { text: "Früh schlafen gehen", punkte: 9 },
+      { text: "Der Abwasch", punkte: 38 },
+      { text: "Essen im Kühlschrank", punkte: 25 },
+      { text: "Das Bad", punkte: 17 },
+      { text: "Der Müll", punkte: 12 },
+      { text: "Klopapier", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne ein Getränk, das man morgens trinkt",
+    frage: "Nenne etwas, das jeder auf dem Handy hat und nie benutzt",
     antworten: [
-      { text: "Kaffee", punkte: 45 },
-      { text: "Tee", punkte: 24 },
-      { text: "Wasser", punkte: 15 },
-      { text: "Orangensaft", punkte: 11 },
-      { text: "Milch", punkte: 5 },
+      { text: "Vorinstallierte Apps", punkte: 36 },
+      { text: "Der Ordner mit dem Rest", punkte: 22 },
+      { text: "Alte Screenshots", punkte: 20 },
+      { text: "Eine zweite Wetter-App", punkte: 14 },
+      { text: "Notizen von 2019", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das im Sommer schmilzt",
+    frage: "Nenne etwas, das man macht, wenn man verschlafen hat",
     antworten: [
-      { text: "Eis", punkte: 40 },
-      { text: "Schokolade", punkte: 28 },
-      { text: "Butter", punkte: 15 },
-      { text: "Asphalt", punkte: 10 },
-      { text: "Kerzen", punkte: 7 },
+      { text: "Panisch aufspringen", punkte: 39 },
+      { text: "Duschen weglassen", punkte: 24 },
+      { text: "Eine Ausrede erfinden", punkte: 18 },
+      { text: "Einfach liegen bleiben", punkte: 11 },
+      { text: "Rennen", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man vor dem Urlaub vergisst",
+    frage: "Nenne etwas, das man bereut, online bestellt zu haben",
     antworten: [
-      { text: "Ladekabel", punkte: 32 },
-      { text: "Zahnbürste", punkte: 24 },
-      { text: "Pass", punkte: 18 },
-      { text: "Sonnencreme", punkte: 15 },
-      { text: "Fenster schliessen", punkte: 11 },
+      { text: "Klamotten, die nicht passen", punkte: 37 },
+      { text: "Was nachts Bestelltes", punkte: 25 },
+      { text: "Billigen China-Kram", punkte: 18 },
+      { text: "Viel zu viel auf einmal", punkte: 12 },
+      { text: "Ein Fitnessgerät", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das man in einem Wartezimmer macht",
+    frage: "Nenne etwas, das man tut, um ein Gespräch zu beenden",
     antworten: [
-      { text: "Handy schauen", punkte: 38 },
-      { text: "Zeitschrift lesen", punkte: 26 },
-      { text: "Andere beobachten", punkte: 17 },
-      { text: "Nachrichten schreiben", punkte: 12 },
-      { text: "Einschlafen", punkte: 7 },
+      { text: "Auf die Uhr schauen", punkte: 35 },
+      { text: "Ja dann mal sagen", punkte: 27 },
+      { text: "Sagen, man muss los", punkte: 19 },
+      { text: "Aufs Handy schauen", punkte: 11 },
+      { text: "Langsam wegdriften", punkte: 8 },
     ]
   },
   {
-    frage: "Nenne etwas, das teurer ist, als man denkt",
+    frage: "Nenne etwas, das man beim Zocken als Erstes einstellt",
     antworten: [
-      { text: "Drucker-Tinte", punkte: 29 },
-      { text: "Autoreparatur", punkte: 25 },
-      { text: "Zahnarzt", punkte: 20 },
-      { text: "Umzug", punkte: 16 },
-      { text: "Hochzeit", punkte: 10 },
+      { text: "Die Maus-Sensi", punkte: 34 },
+      { text: "Die Grafik", punkte: 26 },
+      { text: "Die Tastenbelegung", punkte: 20 },
+      { text: "Die Lautstärke", punkte: 12 },
+      { text: "Den Namen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man macht, wenn man allein im Aufzug ist",
+    antworten: [
+      { text: "In den Spiegel schauen", punkte: 38 },
+      { text: "Tanzen oder singen", punkte: 24 },
+      { text: "Die Haare richten", punkte: 18 },
+      { text: "Grimassen schneiden", punkte: 12 },
+      { text: "Hochspringen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne den Typen, den es in jeder Freundesgruppe gibt",
+    antworten: [
+      { text: "Der immer zu spät kommt", punkte: 40 },
+      { text: "Der nie Geld dabei hat", punkte: 23 },
+      { text: "Der immer absagt", punkte: 17 },
+      { text: "Der Lauteste", punkte: 12 },
+      { text: "Der alles organisiert", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man tut, wenn der Strom ausfällt",
+    antworten: [
+      { text: "Handy-Taschenlampe an", punkte: 42 },
+      { text: "Kerzen suchen", punkte: 24 },
+      { text: "Die Sicherung checken", punkte: 16 },
+      { text: "Beim Nachbarn klingeln", punkte: 10 },
+      { text: "Schlafen gehen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man auf keiner Party machen sollte",
+    antworten: [
+      { text: "Zu viel trinken", punkte: 36 },
+      { text: "Die Musik wechseln", punkte: 24 },
+      { text: "Mit dem Ex reden", punkte: 19 },
+      { text: "Was kaputt machen", punkte: 13 },
+      { text: "Als Erster gehen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man macht, wenn man sich verlaufen hat",
+    antworten: [
+      { text: "Google Maps aufmachen", punkte: 45 },
+      { text: "So tun, als wär's Absicht", punkte: 21 },
+      { text: "Jemanden fragen", punkte: 16 },
+      { text: "Umdrehen", punkte: 10 },
+      { text: "Einfach weiterlaufen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne den schlimmsten Geruch, den jeder kennt",
+    antworten: [
+      { text: "Alte Sportschuhe", punkte: 35 },
+      { text: "Verdorbenes Essen", punkte: 26 },
+      { text: "Müll im Sommer", punkte: 19 },
+      { text: "Nasser Hund", punkte: 12 },
+      { text: "Öffentliche Toilette", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man tut, um beim Streit recht zu behalten",
+    antworten: [
+      { text: "Lauter werden", punkte: 34 },
+      { text: "Googeln und Beweis zeigen", punkte: 27 },
+      { text: "Ein altes Thema ausgraben", punkte: 19 },
+      { text: "Beleidigt schweigen", punkte: 12 },
+      { text: "Einfach rausgehen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man kauft und nach zwei Wochen nie wieder anfasst",
+    antworten: [
+      { text: "Ein Fitnessgerät", punkte: 37 },
+      { text: "Ein Buch", punkte: 24 },
+      { text: "Ein Instrument", punkte: 19 },
+      { text: "Ein neues Hobby-Set", punkte: 12 },
+      { text: "Eine Küchenmaschine", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man macht, wenn spontan Besuch kommt",
+    antworten: [
+      { text: "Alles in den Schrank stopfen", punkte: 40 },
+      { text: "Schnell durchsaugen", punkte: 23 },
+      { text: "Lüften", punkte: 17 },
+      { text: "Sich umziehen", punkte: 12 },
+      { text: "So tun, als wär man nicht da", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man im Urlaub garantiert vergisst",
+    antworten: [
+      { text: "Das Ladekabel", punkte: 41 },
+      { text: "Die Zahnbürste", punkte: 22 },
+      { text: "Sonnencreme", punkte: 17 },
+      { text: "Unterwäsche", punkte: 12 },
+      { text: "Den Adapter", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man als Kind unglaublich cool fand",
+    antworten: [
+      { text: "Ein Handy mit Kamera", punkte: 33 },
+      { text: "Skateboard oder Rollerblades", punkte: 25 },
+      { text: "Eine Lederjacke", punkte: 19 },
+      { text: "Gefärbte Haare", punkte: 14 },
+      { text: "Kaugummiblasen machen", punkte: 9 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das im Gruppenchat immer passiert",
+    antworten: [
+      { text: "Keiner antwortet", punkte: 38 },
+      { text: "Einer spammt Memes", punkte: 25 },
+      { text: "Ein Plan wird nie umgesetzt", punkte: 18 },
+      { text: "Jemand verlässt die Gruppe", punkte: 11 },
+      { text: "500 ungelesene Nachrichten", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man tut, wenn man sich blamiert hat",
+    antworten: [
+      { text: "So tun, als wär nichts", punkte: 37 },
+      { text: "Selbst drüber lachen", punkte: 25 },
+      { text: "Schnell verschwinden", punkte: 18 },
+      { text: "Nachts wieder dran denken", punkte: 12 },
+      { text: "Es allen selbst erzählen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das man macht, kurz bevor man einschläft",
+    antworten: [
+      { text: "Am Handy scrollen", punkte: 44 },
+      { text: "An peinliche Momente denken", punkte: 21 },
+      { text: "Nochmal aufs Klo", punkte: 15 },
+      { text: "Den Wecker stellen", punkte: 12 },
+      { text: "Das Kissen umdrehen", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne etwas, das jeder behauptet zu können, aber keiner wirklich kann",
+    antworten: [
+      { text: "Gut tanzen", punkte: 33 },
+      { text: "Eine Fremdsprache", punkte: 26 },
+      { text: "Kochen", punkte: 19 },
+      { text: "Singen", punkte: 14 },
+      { text: "Autos reparieren", punkte: 8 },
+    ]
+  },
+  {
+    frage: "Nenne den ersten Gedanken am Montagmorgen",
+    antworten: [
+      { text: "Noch fünf Minuten", punkte: 42 },
+      { text: "Warum ist das Wochenende vorbei", punkte: 23 },
+      { text: "Ich kündige", punkte: 16 },
+      { text: "Was zieh ich an", punkte: 11 },
+      { text: "Kaffee", punkte: 8 },
     ]
   }
 ];
