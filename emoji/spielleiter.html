@@ -169,7 +169,9 @@ function render(){
     const riddle = RAETSEL[state.riddleIndex];
     statusLine.innerHTML = `Rätsel <b>#${state.riddleIndex+1}</b> — aufgedeckt: <b>${state.revealedCount}/4</b> — aktuell wert: <b>${currentPoints()} Punkte</b>${state.solved?' — GELÖST':''}`;
     emojiPreview.textContent = riddle.emojis.map((e,i)=> i<state.revealedCount ? e : '❔').join('  ');
-    if(window.twemoji) twemoji.parse(emojiPreview, { base: 'https://cdn.jsdelivr.net/npm/@twemoji/svg@15.0.0/', folder: '', ext: '.svg' });
+    if(window.twemoji) twemoji.parse(emojiPreview, {
+      callback: (icon) => 'https://cdn.jsdelivr.net/npm/@twemoji/svg@15.0.0/' + icon + '.svg'
+    });
     answerReveal.textContent = 'Antwort: ' + riddle.antwort;
   } else {
     statusLine.textContent = state.poolExhausted
