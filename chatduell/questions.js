@@ -325,7 +325,7 @@ const QUESTIONS = [
     antworten: [
       { text: "Klamotten, die nicht passen", punkte: 37 },
       { text: "Was nachts Bestelltes", punkte: 25 },
-      { text: "Billigen China-Kram", punkte: 18 },
+      { text: "Billigen Kram", punkte: 18 },
       { text: "Viel zu viel auf einmal", punkte: 12 },
       { text: "Ein Fitnessgerät", punkte: 8 },
     ]
