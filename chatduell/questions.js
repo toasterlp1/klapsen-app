@@ -343,11 +343,11 @@ const QUESTIONS = [
   {
     frage: "Nenne etwas, das man beim Zocken als Erstes einstellt",
     antworten: [
-      { text: "Die Maus-Sensi", punkte: 34 },
-      { text: "Die Grafik", punkte: 26 },
+      { text: "Die Lautstärke", punkte: 34 },
+      { text: "Den NamenDie Grafik", punkte: 26 },
       { text: "Die Tastenbelegung", punkte: 20 },
-      { text: "Die Lautstärke", punkte: 12 },
-      { text: "Den Namen", punkte: 8 },
+      { text: "Die Maus-Sensi", punkte: 12 },
+      { text: "Die Grafik", punkte: 8 },
     ]
   },
   {
@@ -374,10 +374,10 @@ const QUESTIONS = [
     frage: "Nenne etwas, das man tut, wenn der Strom ausfällt",
     antworten: [
       { text: "Handy-Taschenlampe an", punkte: 42 },
-      { text: "Kerzen suchen", punkte: 24 },
-      { text: "Die Sicherung checken", punkte: 16 },
-      { text: "Beim Nachbarn klingeln", punkte: 10 },
-      { text: "Schlafen gehen", punkte: 8 },
+      { text: "Schlafen gehen", punkte: 24 },
+      { text: "Kerzen suchen", punkte: 16 },
+      { text: "Die Sicherung checken", punkte: 10 },
+      { text: "Beim Nachbarn klingeln", punkte: 8 },
     ]
   },
   {
@@ -385,7 +385,7 @@ const QUESTIONS = [
     antworten: [
       { text: "Zu viel trinken", punkte: 36 },
       { text: "Die Musik wechseln", punkte: 24 },
-      { text: "Mit dem Ex reden", punkte: 19 },
+      { text: "Mit Sketchy-Fremden reden", punkte: 19 },
       { text: "Was kaputt machen", punkte: 13 },
       { text: "Als Erster gehen", punkte: 8 },
     ]
@@ -394,10 +394,10 @@ const QUESTIONS = [
     frage: "Nenne etwas, das man macht, wenn man sich verlaufen hat",
     antworten: [
       { text: "Google Maps aufmachen", punkte: 45 },
-      { text: "So tun, als wär's Absicht", punkte: 21 },
-      { text: "Jemanden fragen", punkte: 16 },
-      { text: "Umdrehen", punkte: 10 },
-      { text: "Einfach weiterlaufen", punkte: 8 },
+      { text: "Umdrehen", punkte: 21 },
+      { text: "Einfach weiterlaufen", punkte: 16 },
+      { text: "Jemanden fragen", punkte: 10 },
+      { text: "So tun, als wär's Absicht", punkte: 8 },
     ]
   },
   {
@@ -433,11 +433,11 @@ const QUESTIONS = [
   {
     frage: "Nenne etwas, das man macht, wenn spontan Besuch kommt",
     antworten: [
-      { text: "Alles in den Schrank stopfen", punkte: 40 },
-      { text: "Schnell durchsaugen", punkte: 23 },
+      { text: "So tun, als wär man nicht da", punkte: 40 },
+      { text: "Alles in den Schrank stopfenSchnell durchsaugen", punkte: 23 },
       { text: "Lüften", punkte: 17 },
       { text: "Sich umziehen", punkte: 12 },
-      { text: "So tun, als wär man nicht da", punkte: 8 },
+      { text: "Schnell durchsaugen", punkte: 8 },
     ]
   },
   {
@@ -453,11 +453,11 @@ const QUESTIONS = [
   {
     frage: "Nenne etwas, das man als Kind unglaublich cool fand",
     antworten: [
-      { text: "Ein Handy mit Kamera", punkte: 33 },
+      { text: "Kaugummiblasen machen", punkte: 33 },
       { text: "Skateboard oder Rollerblades", punkte: 25 },
       { text: "Eine Lederjacke", punkte: 19 },
       { text: "Gefärbte Haare", punkte: 14 },
-      { text: "Kaugummiblasen machen", punkte: 9 },
+      { text: "Ein Handy mit Kamera", punkte: 9 },
     ]
   },
   {
@@ -474,9 +474,9 @@ const QUESTIONS = [
     frage: "Nenne etwas, das man tut, wenn man sich blamiert hat",
     antworten: [
       { text: "So tun, als wär nichts", punkte: 37 },
-      { text: "Selbst drüber lachen", punkte: 25 },
+      { text: "Nachts wieder dran denken", punkte: 25 },
       { text: "Schnell verschwinden", punkte: 18 },
-      { text: "Nachts wieder dran denken", punkte: 12 },
+      { text: "Selbst drüber lachen", punkte: 12 },
       { text: "Es allen selbst erzählen", punkte: 8 },
     ]
   },
@@ -485,9 +485,9 @@ const QUESTIONS = [
     antworten: [
       { text: "Am Handy scrollen", punkte: 44 },
       { text: "An peinliche Momente denken", punkte: 21 },
-      { text: "Nochmal aufs Klo", punkte: 15 },
-      { text: "Den Wecker stellen", punkte: 12 },
-      { text: "Das Kissen umdrehen", punkte: 8 },
+      { text: "Den Wecker stellen", punkte: 15 },
+      { text: "Das Kissen umdrehen", punkte: 12 },
+      { text: "Nochmal aufs Klo", punkte: 8 },
     ]
   },
   {
@@ -507,7 +507,7 @@ const QUESTIONS = [
       { text: "Warum ist das Wochenende vorbei", punkte: 23 },
       { text: "Ich kündige", punkte: 16 },
       { text: "Was zieh ich an", punkte: 11 },
-      { text: "Kaffee", punkte: 8 },
+      { text: "Kaffee/Energy", punkte: 8 },
     ]
   }
 ];
