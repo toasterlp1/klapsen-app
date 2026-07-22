@@ -358,7 +358,9 @@ function render(){
       return `<div class="${cls.join(' ')}">${shown ? e : '<span class="hidden-mark">?</span>'}</div>`;
     }).join('');
     lastRevealedCount = revealedCount;
-    if(window.twemoji) twemoji.parse(boardEl, { base: 'https://cdn.jsdelivr.net/npm/@twemoji/svg@15.0.0/', folder: '', ext: '.svg' });
+    if(window.twemoji) twemoji.parse(boardEl, {
+      callback: (icon) => 'https://cdn.jsdelivr.net/npm/@twemoji/svg@15.0.0/' + icon + '.svg'
+    });
     const pts = 5 - revealedCount;
     pointsBadge.style.display='block';
     pointsBadge.textContent = pts + ' PUNKT' + (pts===1?'':'E');
