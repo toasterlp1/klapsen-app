@@ -1,170 +1,162 @@
 <!doctype html>
-<html lang="de">
+<html class="host" lang="de">
 <head>
 <meta charset="utf-8" />
-<title>Hotzone — Spielleiter</title>
+<title>Imposter — Host</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../auth.js"></script>
-<script src="./categories.js"></script>
+<script src="../avatare.js"></script>
 <style>
+  /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
+  :root{ --u: 1vw; }
+  @media (max-width:900px) and (orientation:portrait){
+    :root{ --u: 0.62vh; }
+    html.host, body.host{ height:auto; min-height:100%; overflow-y:auto; overflow-x:hidden; }
+  }
+  @media (max-width:900px) and (orientation:portrait) and (min-aspect-ratio:3/5){
+    :root{ --u: 0.72vh; }
+  }
+  @media (max-height:520px) and (orientation:landscape){
+    :root{ --u: 1.35vh; }
+  }
+
+  .avatar-pic{
+  width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;
+}
   :root{
-    --bg:#0a0e1a; --bg2:#0d1524; --panel:#12172a; --panel2:#161f38; --border:#232b45;
-    --ink:#eef1f8; --muted:#7a86a3;
-    --cold:#3a7bff; --warm:#ffd166; --hot:#ff3860; --accent:#00e5c7;
-    --blue:#3a7bff; --red:#ff3860;
-    --ease:cubic-bezier(.22,.9,.32,1); --ease-out:cubic-bezier(.16,1,.3,1);
+    --bg:#0b0e14; --panel:#151a24; --panel-2:#1b2230; --border:#2a3244;
+    --ink:#f3f1e8; --muted:#7c8494;
+    --accent:#ff5b3a; --accent-glow:rgba(255,91,58,.35);
+    --gold:#d9a441; --crimson:#e2495a; --mint:#35d0a4;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0;
+  html,body{margin:0;padding:0;background:transparent;width:1920px;height:1080px;overflow:hidden;font-family:'Manrope',sans-serif;}
+
+  .stage{
+    position:relative;width:1920px;height:1080px;overflow:hidden;
     background:
-      radial-gradient(ellipse 60vw 40vh at 10% -10%, rgba(58,123,255,.12), transparent 60%),
-      radial-gradient(ellipse 60vw 40vh at 95% 105%, rgba(255,56,96,.1), transparent 60%),
+      radial-gradient(ellipse 1200px 700px at 50% 8%, rgba(255,91,58,.10), transparent 62%),
+      radial-gradient(ellipse 900px 600px at 50% 100%, rgba(217,164,65,.06), transparent 60%),
       var(--bg);
-    color:var(--ink);font-family:'Inter',sans-serif;padding:26px;min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
   }
-  h1{
-    font-family:'Anton',sans-serif;letter-spacing:4px;margin:0 0 4px;font-size:26px;
-    background:linear-gradient(180deg,#eaf2ff 0%, var(--accent) 45%, var(--hot) 100%);
+  .stage::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(ellipse 1400px 900px at 50% 45%, black, transparent 75%);
+    mask-image:radial-gradient(ellipse 1400px 900px at 50% 45%, black, transparent 75%);
+  }
+
+  .title{
+    position:absolute;top:54px;left:0;right:0;text-align:center;
+    font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:10px;
+    background:linear-gradient(180deg,#fffdf6 0%, var(--ink) 55%, var(--accent) 150%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
-  .h-rule{width:80px;height:3px;border-radius:2px;margin-bottom:22px;
-    background:linear-gradient(90deg, var(--cold), var(--warm), var(--hot));}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:1200px;margin:0 auto;}
-  .card{
-    background:linear-gradient(165deg,var(--panel2),var(--panel));
-    border:1px solid var(--border);border-radius:16px;padding:20px;
-  }
-  .card.full{grid-column:1 / -1;}
-  .card h2{font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:0 0 14px;font-weight:800;}
-  button{
-    font-family:'Inter',sans-serif;font-weight:800;border:none;border-radius:10px;
-    padding:11px 16px;cursor:pointer;font-size:13px;transition:transform .1s, opacity .15s, filter .15s;
-    letter-spacing:.2px;
-  }
-  button:active{transform:scale(.96);}
-  button:disabled{opacity:.3;cursor:not-allowed;}
-  .btn-primary{background:linear-gradient(135deg, var(--accent), #00b89f);color:#04120f;box-shadow:0 4px 16px -4px rgba(0,229,199,.5);}
-  .btn-primary:not(:disabled):hover{filter:brightness(1.08);}
-  .btn-bad{background:linear-gradient(135deg,#ff5470,var(--hot));color:#fff;box-shadow:0 4px 16px -4px rgba(255,56,96,.5);}
-  .btn-ghost{background:#0d1220;color:var(--ink);border:1px solid var(--border);}
-  .btn-ghost:not(:disabled):hover{border-color:var(--accent);}
-  .btn-blue{background:linear-gradient(135deg,#5b96ff,var(--blue));color:#fff;}
-  .btn-red{background:linear-gradient(135deg,#ff5470,var(--red));color:#fff;}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
-  select, input[type=text]{
-    background:#0d1220;border:1px solid var(--border);color:var(--ink);
-    padding:10px 12px;border-radius:8px;font-size:13px;flex:1;
-  }
-  input[type=text]:focus, select:focus{outline:none;border-color:var(--accent);}
-  .status-line{font-size:13.5px;color:var(--muted);margin-bottom:12px;line-height:1.7;}
-  .status-line b{color:var(--ink);}
-  .roster{display:flex;flex-direction:column;gap:6px;}
-  .roster-row{
-    display:flex;align-items:center;gap:6px;background:#0d1220;
-    border:1px solid var(--border);border-radius:8px;padding:8px 10px;
-    transition:border-color .3s var(--ease);
-  }
-  .roster-row.current{border-color:var(--warm);box-shadow:0 0 12px -4px var(--warm);}
-  .roster-row .name{flex:1;font-weight:700;font-size:13px;}
-  .roster-row .name .dot{color:var(--warm);}
-  .mini{padding:5px 9px;font-size:11px;}
-  .score-row{display:flex;gap:16px;margin-bottom:14px;}
-  .score-box{
-    flex:1;padding:16px;border-radius:14px;text-align:center;background:#0d1220;
-    border:2px solid var(--border);transition:border-color .3s, box-shadow .3s;
-  }
-  .score-box.blue{border-color:var(--blue);}
-  .score-box.red{border-color:var(--red);}
-  .score-box .lbl{font-size:11.5px;color:var(--muted);letter-spacing:1.5px;font-weight:800;}
-  .score-box .val{font-family:'Anton',sans-serif;font-size:32px;margin-top:3px;}
-  .score-box.blue .val{color:#7fb0ff;}
-  .score-box.red .val{color:#ff8a9e;}
-  .scale-preview{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0;}
-  .scale-num{
-    width:34px;height:34px;border-radius:9px;background:#0d1220;border:1px solid var(--border);
-    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;
-    cursor:default;font-family:'Anton',sans-serif;color:var(--muted);
-  }
-  .scale-num.target{border-color:var(--warm);color:var(--warm);box-shadow:0 0 14px -2px var(--warm);background:rgba(255,209,102,.08);}
-  .scale-num.grey{opacity:.22;}
-  .joker-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
-  .joker-row button{position:relative;padding-left:30px;}
-  .joker-row button::before{content:'';position:absolute;left:11px;top:50%;width:8px;height:8px;
-    border-radius:50%;transform:translateY(-50%);background:var(--jc);box-shadow:0 0 8px var(--jc);}
-  #btnJokerDouble{--jc:#c44dff;}
-  #btnJokerReroll{--jc:#3a7bff;}
-  #btnJokerGrey{--jc:#ffd166;}
 
-@media (max-width:820px){
-  body{padding:14px;}
-  .grid{grid-template-columns:1fr;gap:14px;}
-  .row{flex-wrap:wrap;}
-  .team-score-row,.score-row,.jn-row,.stat-mini{flex-wrap:wrap;}
-  button,select,input{min-height:40px;}
-}
+  .phase-wrap{height:56px;margin-bottom:46px;position:relative;overflow:hidden;width:1100px;max-width:calc(90 * var(--u));}
+  .phase-label{
+    position:absolute;left:0;right:0;top:0;text-align:center;
+    font-family:'Space Mono',monospace;font-weight:700;font-size:22px;letter-spacing:1.5px;
+    color:var(--gold);
+    transition:opacity .4s ease, transform .4s cubic-bezier(.2,.8,.2,1);
+  }
+  .phase-label::before{
+    content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
+    background:var(--gold);margin-right:12px;vertical-align:middle;
+    box-shadow:0 0 10px var(--gold);
+    animation:blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+  .result-banner{
+    max-width:1200px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.5px;
+    color:var(--ink);background:var(--panel);border:1px solid var(--accent);
+    box-shadow:0 0 0 1px var(--accent-glow) inset, 0 24px 50px -26px rgba(0,0,0,.7);
+    border-radius:16px;padding:26px 40px;margin-bottom:46px;
+    opacity:0;transform:translateY(10px) scale(.97);
+    animation:resultIn .5s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes resultIn{ to{opacity:1;transform:translateY(0) scale(1);} }
+
+  .scoreboard{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;max-width:1650px;}
+  .player-card{
+    position:relative;min-width:190px;padding:22px 28px;border-radius:16px;
+    background:linear-gradient(160deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);text-align:center;
+    box-shadow:0 14px 30px -18px rgba(0,0,0,.7);
+    opacity:0;transform:translateY(18px) scale(.94);
+    animation:cardIn .5s cubic-bezier(.2,.8,.2,1) forwards;
+    animation-delay:calc(var(--i,0) * 60ms);
+    transition:border-color .25s ease, transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  .player-card:hover{border-color:var(--gold);}
+  @keyframes cardIn{ to{opacity:1;transform:translateY(0) scale(1);} }
+  .player-card .name{
+    font-size:16px;font-weight:800;color:var(--ink);letter-spacing:.4px;
+  }
+  .player-card .score{
+    font-family:'Space Mono',monospace;font-weight:700;font-size:38px;color:var(--mint);margin-top:6px;
+    transition:color .2s ease;
+  }
+  .player-card .tag{
+    font-size:9.5px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:2px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important;}
+  }
+
+  .tension{
+    position:absolute;inset:0;pointer-events:none;z-index:0;
+    opacity:0;transition:opacity 1.4s ease, background 1.4s ease;
+  }
+  .tension.assigned{
+    opacity:1;background:radial-gradient(ellipse 1500px 950px at 50% 50%, transparent 50%, rgba(53,208,164,.09) 100%);
+  }
+  .tension.voting{
+    opacity:1;background:radial-gradient(ellipse 1500px 950px at 50% 50%, transparent 42%, rgba(217,164,65,.24) 100%);
+    animation:tensionPulse 1.8s ease-in-out infinite;
+  }
+  .tension.guess{
+    opacity:1;background:radial-gradient(ellipse 1500px 950px at 50% 50%, transparent 38%, rgba(226,73,90,.30) 100%);
+    animation:tensionPulse 1s ease-in-out infinite;
+  }
+  .tension.resolved-crew{
+    opacity:1;background:radial-gradient(ellipse 1500px 950px at 50% 50%, transparent 46%, rgba(53,208,164,.20) 100%);
+  }
+  .tension.resolved-imposter{
+    opacity:1;background:radial-gradient(ellipse 1500px 950px at 50% 50%, transparent 46%, rgba(226,73,90,.24) 100%);
+  }
+  @keyframes tensionPulse{ 0%,100%{opacity:.65;} 50%{opacity:1;} }
+
+  .player-card.ejected{ animation:cardShake .5s ease-in-out; }
+  @keyframes cardShake{
+    0%,100%{ transform:translateX(0) scale(1); }
+    20%{ transform:translateX(-6px) scale(1.02); }
+    40%{ transform:translateX(6px) scale(1.02); }
+    60%{ transform:translateX(-4px) scale(1.02); }
+    80%{ transform:translateX(4px) scale(1.02); }
+  }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../hintergrund-host.css" />
+<style>:root{ --akzent-rgb: 255,91,58; --akzent2-rgb: 120,60,200; }</style>
 </head>
-<body>
-<h1>HOTZONE — SPIELLEITER</h1>
-<div class="h-rule"></div>
-<div class="grid">
-
-  <div class="card full">
-    <h2>Punkte</h2>
-    <div class="score-row">
-      <div class="score-box blue"><div class="lbl">BLUE TEAM</div><div class="val" id="scoreBlue">0</div></div>
-      <div class="score-box red"><div class="lbl">RED TEAM</div><div class="val" id="scoreRed">0</div></div>
-    </div>
-    <button class="btn-ghost" id="btnResetJokers">Joker zurücksetzen</button>
-    <button class="btn-bad" id="btnResetGame">Spiel komplett zurücksetzen</button>
-  </div>
-
-  <div class="card">
-    <h2>Blue Team</h2>
-    <div class="row">
-      <input type="text" id="newPlayerBlue" placeholder="Name eingeben…" />
-      <button class="btn-blue" id="btnAddBlue">Hinzufügen</button>
-    </div>
-    <div class="roster" id="rosterBlue"></div>
-  </div>
-
-  <div class="card">
-    <h2>Red Team</h2>
-    <div class="row">
-      <input type="text" id="newPlayerRed" placeholder="Name eingeben…" />
-      <button class="btn-red" id="btnAddRed">Hinzufügen</button>
-    </div>
-    <div class="roster" id="rosterRed"></div>
-  </div>
-
-  <div class="card full">
-    <h2>Runde</h2>
-    <div class="status-line" id="statusLine">Keine Runde aktiv.</div>
-
-    <div id="roundDetails" style="display:none;">
-      <div class="status-line">
-        Kategorie: <b id="catLabel"></b> — <b id="catLeft"></b> ↔ <b id="catRight"></b><br>
-        Ziel-Zahl: <b id="targetVal" style="color:var(--warm);"></b><br>
-        Hint-Word: <b id="hintVal"></b><br>
-        Team-Tipp: <b id="guessVal">—</b>
-      </div>
-      <div class="scale-preview" id="scalePreview"></div>
-      <div class="joker-row" id="jokerRow"></div>
-    </div>
-
-    <div class="row" style="margin-top:14px;">
-      <button class="btn-primary" id="btnNextRound">Nächste Runde</button>
-      <button class="btn-ghost" id="btnResolve" disabled>Auflösen</button>
-      <button class="btn-ghost" id="btnResetPool">Kategorien-Pool zurücksetzen</button>
-    </div>
-  </div>
-
+<body class="host">
+<div class="stage">
+  <div class="tension" id="tension"></div>
+  <div class="title">IMPOSTER</div>
+  <div class="phase-wrap"><div class="phase-label" id="phaseLabel"></div></div>
+  <div class="result-banner" id="resultBanner" style="display:none;"></div>
+  <div class="scoreboard" id="scoreboard"></div>
 </div>
 
 <script>
@@ -173,256 +165,95 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const defaultState = {
-  players: {},
-  round: 0,
-  activeTeam: null,
-  clueGiverIndex: { blue: 0, red: 0 },
-  clueGiver: null,
-  categoryIndex: null,
-  usedCategories: [],
-  target: null,
-  hintWord: null,
-  phase: 'idle',
-  guessValue: null,
-  greyedNumbers: [],
-  jokersUsed: { blue:{double:false,reroll:false,grey:false}, red:{double:false,reroll:false,grey:false} },
-  doubleActive: false,
-  lastResult: null,
-  blueScore: 0,
-  redScore: 0
-};
-let state = JSON.parse(JSON.stringify(defaultState));
+let state = null;
+let fxLetzterEjected = null;
+let fxLetzteAufloesung = null;
 
-async function loadState(){
-  const { data } = await sb.from('hz_state').select('state').eq('id',1).single();
-  state = Object.assign(JSON.parse(JSON.stringify(defaultState)), data?.state||{});
-  render();
+function tensionKlasse(phase, crewWin){
+  if(phase==='assigned') return 'assigned';
+  if(phase==='voting') return 'voting';
+  if(phase==='guess') return 'guess';
+  if(phase==='resolved') return crewWin ? 'resolved-crew' : 'resolved-imposter';
+  return '';
 }
-async function saveState(){
-  await sb.from('hz_state').update({ state }).eq('id',1);
-}
-loadState();
-setInterval(loadState, 2000);
-
-sb.channel('hz_state_channel_sl')
-  .on('postgres_changes', { event:'*', schema:'public', table:'hz_state' }, payload=>{
-    state = payload.new.state || state;
-    render();
-  }).subscribe();
-
-function teamRoster(team){
-  return Object.entries(state.players).filter(([n,p])=>p.team===team).map(([n])=>n);
-}
-
-function addPlayer(team){
-  const input = document.getElementById('newPlayer'+(team==='blue'?'Blue':'Red'));
-  const name = input.value.trim();
-  if(!name || state.players[name]) return;
-  state.players[name] = { team };
-  input.value='';
-  saveState();
-}
-document.getElementById('btnAddBlue').onclick = ()=>addPlayer('blue');
-document.getElementById('btnAddRed').onclick = ()=>addPlayer('red');
-document.getElementById('newPlayerBlue').addEventListener('keydown', e=>{ if(e.key==='Enter') addPlayer('blue'); });
-document.getElementById('newPlayerRed').addEventListener('keydown', e=>{ if(e.key==='Enter') addPlayer('red'); });
 
 function render(){
-  document.getElementById('scoreBlue').textContent = state.blueScore;
-  document.getElementById('scoreRed').textContent = state.redScore;
+  if(!state) return;
+  const { players={}, phase='idle', hintRound=1, lastResult=null, ejected=null, imposterName=null } = state;
 
-  ['blue','red'].forEach(team=>{
-    const el = document.getElementById('roster'+(team==='blue'?'Blue':'Red'));
-    const roster = teamRoster(team);
-    const currentIdx = state.clueGiverIndex[team] % (roster.length||1);
-    el.innerHTML = roster.length ? roster.map((name,i)=>{
-      const isCurrent = state.activeTeam===team && state.clueGiver===name;
-      return `<div class="roster-row ${isCurrent?'current':''}">
-        <span class="name">${name}${i===currentIdx?' <span class="dot">•</span>':''}</span>
-        <button class="btn-ghost mini" data-remove="${name}">✕</button>
-      </div>`;
-    }).join('') : '<span style="color:var(--muted);font-size:13px;">— leer —</span>';
-    el.querySelectorAll('[data-remove]').forEach(b=>{
-      b.onclick = ()=>{ delete state.players[b.dataset.remove]; saveState(); };
-    });
-  });
+  const crewWin = /Crew-Mitglieder/.test(lastResult||'');
 
-  const statusLine = document.getElementById('statusLine');
-  const roundDetails = document.getElementById('roundDetails');
-  const jokerRow = document.getElementById('jokerRow');
+  document.getElementById('tension').className = 'tension ' + tensionKlasse(phase, crewWin);
 
-  if(state.phase==='idle'){
-    statusLine.textContent = 'Keine Runde aktiv. Klick "Nächste Runde".';
-    roundDetails.style.display = 'none';
+  if(window.HOSTFX && ejected && ejected !== fxLetzterEjected){
+    const istImposter = ejected === imposterName;
+    HOSTFX.joker(
+      ejected,
+      istImposter ? 'IMPOSTER ENTTARNT!' : 'FALSCHE PERSON!',
+      istImposter ? '#35d0a4' : '#e2495a',
+      avatarFor(ejected)
+    );
+  }
+  fxLetzterEjected = ejected || null;
+
+  const aufloeseSchluessel = (phase==='resolved' && lastResult) ? `${state.wordIndex}-${lastResult}` : null;
+  if(window.HOSTFX && aufloeseSchluessel && aufloeseSchluessel !== fxLetzteAufloesung && ejected === imposterName){
+    if(crewWin) HOSTFX.correct(); else HOSTFX.wrong();
+  }
+  fxLetzteAufloesung = aufloeseSchluessel;
+
+  const phaseLabel = document.getElementById('phaseLabel');
+  const resultBanner = document.getElementById('resultBanner');
+
+  const labels = {
+    idle: 'Warte auf nächste Runde…',
+    assigned: `Diskussion läuft — Hinweisrunde ${hintRound}/2`,
+    voting: 'Abstimmung läuft…',
+    guess: 'Der Imposter wurde enttarnt…',
+    resolved: ''
+  };
+  phaseLabel.textContent = labels[phase] ?? '';
+  phaseLabel.style.display = phase==='resolved' ? 'none' : 'block';
+
+  if(phase==='resolved' && lastResult){
+    resultBanner.style.display='block';
+    resultBanner.textContent = lastResult;
   } else {
-    roundDetails.style.display = 'block';
-    const cat = CATEGORIES[state.categoryIndex];
-    statusLine.innerHTML = `Runde <b>${state.round}</b> — Team <b>${state.activeTeam==='blue'?'Blue':'Red'}</b> — Clue-Geber: <b>${state.clueGiver}</b>`;
-    document.getElementById('catLabel').textContent = cat.category;
-    document.getElementById('catLeft').textContent = cat.left;
-    document.getElementById('catRight').textContent = cat.right;
-    document.getElementById('targetVal').textContent = state.target;
-    document.getElementById('hintVal').textContent = state.hintWord || '— wartet —';
-    document.getElementById('guessVal').textContent = state.guessValue!=null ? state.guessValue : '—';
-
-    const scalePreview = document.getElementById('scalePreview');
-    scalePreview.innerHTML = Array.from({length:10},(_, i)=>i+1).map(n=>{
-      const cls = ['scale-num'];
-      if(n===state.target) cls.push('target');
-      if(state.greyedNumbers.includes(n)) cls.push('grey');
-      return `<div class="${cls.join(' ')}">${n}</div>`;
-    }).join('');
-
-    const team = state.activeTeam;
-    const used = state.jokersUsed[team];
-    jokerRow.innerHTML = `
-      <button class="btn-ghost mini" id="btnJokerDouble" ${used.double||state.phase==='resolved'?'disabled':''}>RISK — Doppelte Punkte</button>
-      <button class="btn-ghost mini" id="btnJokerReroll" ${used.reroll||state.phase!=='clue'?'disabled':''}>NEU — Neue Zahl</button>
-      <button class="btn-ghost mini" id="btnJokerGrey" ${used.grey||state.phase!=='guessing'?'disabled':''}>CUT — 2 Zahlen ausgrauen</button>
-    `;
-    document.getElementById('btnJokerDouble').onclick = useJokerDouble;
-    document.getElementById('btnJokerReroll').onclick = useJokerReroll;
-    document.getElementById('btnJokerGrey').onclick = useJokerGrey;
+    resultBanner.style.display='none';
   }
 
-  document.getElementById('btnResolve').disabled = state.phase!=='submitted';
-  document.getElementById('btnNextRound').disabled = state.phase==='clue' || state.phase==='guessing' || state.phase==='submitted';
+  const scoreboardEl = document.getElementById('scoreboard');
+  scoreboardEl.innerHTML = Object.entries(players).map(([name,score],i)=>{
+    const avatarUrl = avatarFor(name);
+    const isEjected = (name === ejected && (phase==='guess' || phase==='resolved'));
+    return `
+    <div class="player-card ${isEjected?'ejected':''}" style="--i:${i}">
+      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:8px;">` : ''}
+      <div class="name">${name}</div>
+      <div class="score">${score}</div>
+      <div class="tag">Punkte</div>
+    </div>
+  `;
+  }).join('');
 }
 
-function pickCategory(){
-  const total = CATEGORIES.length;
-  let available = [...Array(total).keys()].filter(i=>!state.usedCategories.includes(i));
-  if(available.length===0){ state.usedCategories=[]; available=[...Array(total).keys()]; }
-  const idx = available[Math.floor(Math.random()*available.length)];
-  state.usedCategories.push(idx);
-  return idx;
+async function loadState(){
+  const { data } = await sb.from('imp_state').select('state').eq('id',1).single();
+  state = data?.state || {};
+  render();
 }
+loadState();
+setInterval(loadState, 1500);
 
-document.getElementById('btnNextRound').onclick = async ()=>{
-  const blueRoster = teamRoster('blue');
-  const redRoster = teamRoster('red');
-  if(blueRoster.length===0 || redRoster.length===0){
-    alert('Beide Teams brauchen mindestens einen Spieler.');
-    return;
-  }
-  const nextTeam = state.activeTeam==='blue' ? 'red' : 'blue';
-
-  const team = state.round===0 ? 'blue' : nextTeam;
-  const roster = teamRoster(team);
-  const idx = state.clueGiverIndex[team] % roster.length;
-  state.activeTeam = team;
-  state.clueGiver = roster[idx];
-  state.categoryIndex = pickCategory();
-  state.target = Math.floor(Math.random()*10)+1;
-  state.hintWord = null;
-  state.phase = 'clue';
-  state.guessValue = null;
-  state.greyedNumbers = [];
-  state.doubleActive = false;
-  state.lastResult = null;
-  state.round += 1;
-  await saveState();
-};
-
-document.getElementById('btnResetPool').onclick = async ()=>{
-  state.usedCategories = [];
-  await saveState();
-};
-
-async function useJokerDouble(){
-  state.jokersUsed[state.activeTeam].double = true;
-  state.doubleActive = true;
-  await saveState();
-}
-async function useJokerReroll(){
-  if(state.phase!=='clue') return;
-  state.jokersUsed[state.activeTeam].reroll = true;
-  state.categoryIndex = pickCategory();
-  state.target = Math.floor(Math.random()*10)+1;
-  await saveState();
-}
-async function useJokerGrey(){
-  if(state.phase!=='guessing') return;
-  state.jokersUsed[state.activeTeam].grey = true;
-  state.greyedNumbers = waehleGraueZahlen(state.target);
-  await saveState();
-}
-
-function waehleGraueZahlen(target){
-  const nah = [];
-  for(let d = 1; d <= 3; d++){
-    if(target - d >= 1)  nah.push(target - d);
-    if(target + d <= 10) nah.push(target + d);
-  }
-
-  if(nah.length < 2){
-    for(let n = 1; n <= 10; n++){
-      if(n !== target && !nah.includes(n)) nah.push(n);
-    }
-  }
-  const mix = nah.sort(() => Math.random() - 0.5);
-  return mix.slice(0, 2);
-}
-
-document.getElementById('btnResolve').onclick = async ()=>{
-  if(state.phase!=='submitted') return;
-  const distance = Math.abs(state.guessValue - state.target);
-  let points;
-  if(state.doubleActive){
-
-    if(distance === 0)      points = 6;
-    else if(distance === 1) points = -1;
-    else                    points = -3;
-  } else {
-    points = distance===0 ? 3 : (distance===1 ? 1 : 0);
-  }
-  if(state.activeTeam==='blue') state.blueScore += points;
-  else state.redScore += points;
-
-  const teamLabel = state.activeTeam==='blue' ? 'Blue Team' : 'Red Team';
-  state.lastResult = `${teamLabel}: Ziel war ${state.target}, getippt ${state.guessValue} — ${points>=0?'+':''}${points} Punkte`;
-  state.phase = 'resolved';
-
-  state.clueGiverIndex[state.activeTeam] += 1;
-  await saveState();
-};
-
-document.getElementById('btnResetJokers').onclick = async ()=>{
-  state.jokersUsed = { blue:{double:false,reroll:false,grey:false},
-                       red:{double:false,reroll:false,grey:false} };
-  state.doubleActive = false;
-  state.greyedNumbers = [];
-  await saveState();
-};
-
-document.getElementById('btnResetGame').onclick = async ()=>{
-  if(!confirm('Wirklich alles zurücksetzen? Spieler bleiben, Punkte/Runden/Joker werden gelöscht.')) return;
-  const players = state.players;
-  state = JSON.parse(JSON.stringify(defaultState));
-  state.players = players;
-  await saveState();
-};
+sb.channel('imp_state_channel')
+  .on('postgres_changes', { event:'*', schema:'public', table:'imp_state' }, payload=>{
+    state = payload.new.state || {};
+    render();
+  }).subscribe();
 </script>
 <script src="../zurueck.js"></script>
-<script src="../hintergrund.js"></script>
-<script src="../sound-toggle.js"></script>
-<script src="../bestenliste.js"></script>
-<script src="../spiel-beenden.js"></script>
-<script>
-  SpielBeenden.init({
-    format: 'hotzone',
-    sammle: async function () {
-      const { data } = await sb.from('hz_state').select('state').eq('id', 1).single();
-      const s = (data && data.state) || {};
-      const players = s.players || {};
-      const punkteFuer = { blue: s.blueScore || 0, red: s.redScore || 0 };
-      return Object.entries(players).map(function (e) {
-        const team = e[1] && e[1].team;
-        return { spieler: e[0], punkte: punkteFuer[team] || 0 };
-      });
-    }
-  });
-</script>
+<script src="../cam.js"></script>
+<script src="../host-fx.js"></script>
+<script src="../buehne-skalieren.js"></script>
 </body>
 </html>
