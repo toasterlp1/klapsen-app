@@ -136,7 +136,7 @@ const QUESTIONS = [
       { text: "Ein Hochbett", punkte: 33 },
       { text: "Poster an der Wand", punkte: 26 },
       { text: "Eine Lavalampe", punkte: 18 },
-      { text: "Ein Röhrenfernseher", punkte: 14 },
+      { text: "Ein Fernseher", punkte: 14 },
       { text: "Ein Sparschwein", punkte: 9 },
     ]
   },
