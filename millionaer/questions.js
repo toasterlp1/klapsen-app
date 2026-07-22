@@ -1,50 +1,51 @@
 
 const WWM_FRAGEN = [
 
-  { frage: "Die Hauptstadt von Australien ist...", antworten: ["Canberra","Melbourne","Sydney","Ottawa"], richtig: 0 },
+  { frage: "Was passiert, wenn man Cola und Mentos mischt?", antworten: ["Es wird süsser","Es explodiert wie ein Geysir","Gar nichts","Es gefriert"], richtig: 1 },
   { frage: "Wie viele Beine hat eine Spinne?", antworten: ["6","8","10","12"], richtig: 1 },
 
-  { frage: "Welches Element hat das Symbol 'Au'?", antworten: ["Silber","Aluminium","Gold","Kupfer"], richtig: 2 },
-  { frage: "Wie viele Spieler stehen bei einer Fussballmannschaft auf dem Feld?", antworten: ["9","10","11","12"], richtig: 2 },
+  { frage: "Was ist ein Katzenjunges?", antworten: ["Ein Welpe","Ein Kitten","Ein Ferkel","Ein Küken"], richtig: 1 },
+  { frage: "Welche Farbe entsteht, wenn man Blau und Gelb mischt?", antworten: ["Lila","Orange","Grün","Braun"], richtig: 2 },
 
-  { frage: "Welcher Planet ist der Sonne am nächsten?", antworten: ["Venus","Merkur","Mars","Erde"], richtig: 1 },
-  { frage: "Wer malte die Mona Lisa?", antworten: ["Michelangelo","Raffael","Donatello","Leonardo da Vinci"], richtig: 3 },
+  { frage: "Was kann ein Oktopus, was Menschen nicht können?", antworten: ["Fliegen","Die Farbe wechseln","Unsichtbar werden","Feuer spucken"], richtig: 1 },
+  { frage: "Wie viele Minuten hat ein Fussballspiel regulär?", antworten: ["60","80","90","120"], richtig: 2 },
 
-  { frage: "In welchem Jahr fiel die Berliner Mauer?", antworten: ["1987","1989","1991","1993"], richtig: 1 },
-  { frage: "Welches ist das grösste Organ des menschlichen Körpers?", antworten: ["Die Leber","Das Gehirn","Die Haut","Die Lunge"], richtig: 2 },
+  { frage: "Welches Tier schläft im Stehen?", antworten: ["Der Hund","Das Pferd","Die Katze","Der Hase"], richtig: 1 },
+  { frage: "Was ist das grösste Organ des Menschen?", antworten: ["Die Leber","Das Gehirn","Die Haut","Die Lunge"], richtig: 2 },
 
-  { frage: "Welche Firma entwickelte 'League of Legends'?", antworten: ["Valve","Riot Games","Blizzard","Epic Games"], richtig: 1 },
-  { frage: "Wie heisst die Währung Japans?", antworten: ["Won","Yuan","Yen","Baht"], richtig: 2 },
+  { frage: "Wie nennt man einen Pilz, der auf Pizza landet?", antworten: ["Champignon","Fliegenpilz","Trüffel","Pfifferling"], richtig: 0 },
+  { frage: "Wie heisst die Währung in Japan?", antworten: ["Won","Yuan","Yen","Baht"], richtig: 2 },
 
   { frage: "Wie viele Herzen hat ein Oktopus?", antworten: ["1","2","3","4"], richtig: 2 },
-  { frage: "Welcher Fluss fliesst durch Wien?", antworten: ["Die Donau","Der Rhein","Die Elbe","Die Themse"], richtig: 0 },
+  { frage: "Welches Tier kann rückwärts fliegen?", antworten: ["Der Adler","Der Kolibri","Die Möwe","Der Papagei"], richtig: 1 },
 
-  { frage: "Wer schrieb 'Der Herr der Ringe'?", antworten: ["C. S. Lewis","J. R. R. Tolkien","George R. R. Martin","Terry Pratchett"], richtig: 1 },
-  { frage: "Welches Land gewann die Fussball-WM 2014?", antworten: ["Brasilien","Argentinien","Deutschland","Spanien"], richtig: 2 },
+  { frage: "Was passiert mit Bananen, wenn sie zu lange liegen?", antworten: ["Sie werden grün","Sie werden braun","Sie werden hart","Sie schrumpfen zu nichts"], richtig: 1 },
+  { frage: "Welches Land isst pro Kopf am meisten Käse?", antworten: ["Deutschland","Frankreich","Italien","Dänemark"], richtig: 1 },
 
-  { frage: "Wie heisst das grösste Korallenriff der Welt?", antworten: ["Belize Barrier Reef","Great Barrier Reef","Red Sea Reef","Tubbataha Reef"], richtig: 1 },
-  { frage: "Welches chemische Element hat die Ordnungszahl 1?", antworten: ["Helium","Sauerstoff","Wasserstoff","Kohlenstoff"], richtig: 2 },
+  { frage: "Was ist Wasabi eigentlich?", antworten: ["Eine Alge","Eine Wurzel","Eine Bohne","Ein Fisch"], richtig: 1 },
+  { frage: "Wie lange kann ein Mensch ungefähr ohne Schlaf auskommen?", antworten: ["1 Tag","3 Tage","11 Tage","30 Tage"], richtig: 2 },
 
-  { frage: "In welchem Jahr erschien das originale 'Doom'?", antworten: ["1991","1993","1995","1997"], richtig: 1 },
-  { frage: "Wer war der erste Mensch im Weltall?", antworten: ["Neil Armstrong","Alan Shepard","Juri Gagarin","John Glenn"], richtig: 2 },
+  { frage: "Welches Tier hat den längsten Schlaf pro Tag?", antworten: ["Die Katze","Das Faultier","Der Koala","Der Bär"], richtig: 2 },
+  { frage: "Was ist ein Zwiebelturm?", antworten: ["Ein Gemüsestapel","Eine Kirchturmform","Ein Kochtrick","Ein Kartenspiel"], richtig: 1 },
 
+  { frage: "Was passiert, wenn man Popcornmais zu lange erhitzt?", antworten: ["Es wird gross","Es verbrennt","Es schmilzt","Es wird flüssig"], richtig: 1 },
   { frage: "Welche Stadt liegt auf zwei Kontinenten?", antworten: ["Kairo","Istanbul","Athen","Moskau"], richtig: 1 },
-  { frage: "Wie heisst der tiefste See der Welt?", antworten: ["Der Titicacasee","Der Baikalsee","Der Tanganjikasee","Das Kaspische Meer"], richtig: 1 },
 
-  { frage: "Welcher Komponist schrieb die Oper 'Carmen'?", antworten: ["Giuseppe Verdi","Georges Bizet","Richard Wagner","Giacomo Puccini"], richtig: 1 },
-  { frage: "Welches Studio entwickelte 'Elden Ring'?", antworten: ["Capcom","Bandai Namco","FromSoftware","Square Enix"], richtig: 2 },
+  { frage: "Wie viele Löcher hat ein Strohhalm?", antworten: ["Keins","Eins","Zwei","Drei"], richtig: 1 },
+  { frage: "Welches Tier kann seinen Kopf fast komplett drehen?", antworten: ["Die Eule","Der Frosch","Der Fisch","Die Ente"], richtig: 0 },
 
-  { frage: "Wie heisst die Hauptstadt von Kasachstan?", antworten: ["Astana","Almaty","Taschkent","Bischkek"], richtig: 0 },
-  { frage: "Welcher Physiker formulierte die Unschärferelation?", antworten: ["Niels Bohr","Max Planck","Werner Heisenberg","Erwin Schrödinger"], richtig: 2 },
+  { frage: "Was ist eine Erdnuss botanisch gesehen?", antworten: ["Eine Nuss","Eine Hülsenfrucht","Eine Beere","Ein Samen"], richtig: 1 },
+  { frage: "Welches Meerestier hat blaues Blut?", antworten: ["Der Hai","Der Tintenfisch","Der Delfin","Die Qualle"], richtig: 1 },
 
-  { frage: "In welchem Jahr eroberten die Osmanen Konstantinopel?", antworten: ["1453","1492","1517","1389"], richtig: 0 },
-  { frage: "Wie heisst das einzige Säugetier, das Eier legt und in Australien lebt?", antworten: ["Der Koala","Das Schnabeltier","Der Wombat","Das Opossum"], richtig: 1 },
+  { frage: "Was ist eine Banane botanisch gesehen?", antworten: ["Eine Frucht","Eine Beere","Ein Gemüse","Ein Kraut"], richtig: 1 },
+  { frage: "Wie viele Zähne hat ein erwachsener Mensch normalerweise?", antworten: ["28","30","32","36"], richtig: 2 },
 
-  { frage: "Welcher Regisseur drehte 'Die sieben Samurai'?", antworten: ["Yasujiro Ozu","Akira Kurosawa","Kenji Mizoguchi","Hayao Miyazaki"], richtig: 1 },
-  { frage: "Wie heisst der grösste Vulkan im Sonnensystem?", antworten: ["Mauna Loa","Olympus Mons","Ätna","Vesuv"], richtig: 1 },
+  { frage: "Welches Lebensmittel wird nie schlecht?", antworten: ["Milch","Honig","Brot","Käse"], richtig: 1 },
+  { frage: "Welcher Planet dreht sich rückwärts?", antworten: ["Mars","Venus","Jupiter","Saturn"], richtig: 1 },
 
-  { frage: "Welche Konstante beschreibt die Zahl der Teilchen in einem Mol?", antworten: ["Planck-Konstante","Avogadro-Zahl","Boltzmann-Konstante","Faraday-Konstante"], richtig: 1 },
-  { frage: "Wie heisst das Schwarze Loch im Zentrum der Milchstrasse?", antworten: ["Cygnus X-1","Sagittarius A*","M87*","Centaurus A"], richtig: 1 },
+  { frage: "Wie viel Prozent des Gehirns nutzt der Mensch wirklich?", antworten: ["10 Prozent","50 Prozent","Fast alles","30 Prozent"], richtig: 2 },
+  { frage: "Was ist der kürzeste Krieg der Geschichte gewesen?", antworten: ["3 Tage","38 Minuten","1 Woche","2 Stunden"], richtig: 1 },
+
 ];
 
 function wwmPunkte(index) {
