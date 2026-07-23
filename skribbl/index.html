@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="../symbole.js"></script>
@@ -562,25 +563,45 @@ $('guessInput').addEventListener('keydown', async e => {
   const ziel = normalisiere(s.wort || '');
   const tipp = normalisiere(text);
 
-  if(tipp === ziel){
+  // Chat und Punkte haengt die Datenbank an. Tippen mehrere
+  // gleichzeitig, wuerde sonst der letzte Schreibvorgang die
+  // Eintraege dazwischen ueberschreiben.
+  async function anhaengen(txt, art, punkte){
+    const { data, error } = await sb.rpc('skr_chat_anhaengen', {
+      p_name: myName, p_text: txt, p_art: art, p_punkte: punkte || 0
+    });
+    if(error){
+      console.warn('skr_chat_anhaengen nicht verfuegbar, nutze Rueckfall:', error.message);
+      const s2 = await ladeState();
+      s2.chat.push({ name: myName, text: txt, art: art });
+      if(punkte > 0 && s2.players[myName]){
+        s2.players[myName].score += punkte;
+        s2.players[myName].guessedAt = Date.now();
+      }
+      await speichere(s2);
+      return s2;
+    }
+    if(data) state = data;
+    return data;
+  }
 
+  if(tipp === ziel){
     const verstrichen = (Date.now() - s.startAt) / 1000;
     const anteil = Math.max(0, 1 - verstrichen / s.sekunden);
     const punkte = Math.round(30 + anteil * 70);
-    s.players[myName].score += punkte;
-    s.players[myName].guessedAt = Date.now();
-    s.chat.push({ name: myName, text: `hat es erraten! +${punkte}`, art: 'correct' });
 
-    const rater = Object.keys(s.players).filter(n => n !== s.zeichner);
-    const alleRichtig = rater.length > 0 && rater.every(n => s.players[n].guessedAt != null);
-    await speichere(s);
-    if(alleRichtig) await zugBeenden(s);
+    const neu = await anhaengen(`hat es erraten! +${punkte}`, 'correct', punkte);
+
+    // Erst nach dem Schreiben pruefen, ob alle durch sind - sonst
+    // haette jeder seinen eigenen, veralteten Stand als Grundlage.
+    const aktuell = neu || await ladeState();
+    const rater = Object.keys(aktuell.players).filter(n => n !== aktuell.zeichner);
+    const alleRichtig = rater.length > 0 && rater.every(n => aktuell.players[n].guessedAt != null);
+    if(alleRichtig) await zugBeenden(aktuell);
   } else if(fastRichtig(tipp, ziel)){
-    s.chat.push({ name: myName, text: `${text} — ganz nah dran!`, art: 'close' });
-    await speichere(s);
+    await anhaengen(`${text} — ganz nah dran!`, 'close', 0);
   } else {
-    s.chat.push({ name: myName, text: text, art: '' });
-    await speichere(s);
+    await anhaengen(text, '', 0);
   }
 });
 
@@ -997,12 +1018,47 @@ async function tick(){
 tick();
 setInterval(tick, 1200);
 
-setInterval(holeStriche, 350);
+// Beim Zeichnen kommen Striche ueber Realtime an. Der frueher
+// zusaetzlich laufende 350ms-Timer hat dieselben Daten nochmal
+// abgefragt - bei sechs Leuten waren das rund 60 Anfragen pro
+// Sekunde allein fuer die Striche.
+// Jetzt: Realtime als Hauptweg, ein langsames Netz als Absicherung.
+let skrVerbunden = false;
+let skrNetz = null;
 
-sb.channel('skr_sync')
-  .on('postgres_changes', { event:'*', schema:'public', table:'skr_state' }, () => tick())
-  .on('postgres_changes', { event:'INSERT', schema:'public', table:'skr_strokes' }, () => holeStriche())
-  .subscribe();
+function skrNetzSetzen(ms){
+  if(skrNetz) clearInterval(skrNetz);
+  skrNetz = setInterval(function(){
+    holeStriche();
+    if(!skrVerbunden) tick();
+  }, ms);
+}
+
+function skrVerbinden(){
+  sb.channel('skr_sync_' + Math.random().toString(36).slice(2,8))
+    .on('postgres_changes', { event:'*', schema:'public', table:'skr_state' }, () => tick())
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'skr_strokes' }, () => holeStriche())
+    .subscribe(function(status){
+      if(status === 'SUBSCRIBED'){
+        skrVerbunden = true;
+        skrNetzSetzen(8000);
+        holeStriche();   // waehrend der Luecke Verpasstes nachholen
+        tick();
+      } else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED'){
+        skrVerbunden = false;
+        skrNetzSetzen(600);
+        setTimeout(skrVerbinden, 2000);
+      }
+    });
+}
+
+skrVerbinden();
+skrNetzSetzen(600);
+
+// Nach dem Zurueckkehren auf den Tab sofort nachziehen
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible'){ holeStriche(); tick(); }
+});
 </script>
 <script src="../zurueck.js"></script>
 <script src="../hintergrund.js"></script>
