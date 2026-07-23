@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="./kategorien.js"></script>
@@ -262,13 +264,19 @@ async function saveState(){
   await sb.from('slf_state').update({ state }).eq('id',1);
 }
 loadState();
-setInterval(loadState, 2500);
-
-sb.channel('slf_state_channel')
-  .on('postgres_changes', { event:'*', schema:'public', table:'slf_state' }, payload=>{
-    state = Object.assign(JSON.parse(JSON.stringify(LEER)), payload.new.state||{});
-    render();
-  }).subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'slf_state',
+    laden: async function(){ await loadState(); }
+  });
+} else {
+  setInterval(loadState, 2000);
+}
 
 let aktuellePhaseGebaut = null;  // welche Ansicht ist gerade im DOM
 function render(){
@@ -509,13 +517,27 @@ let speicherTimeout = null;
 function queueAntwortSpeichern(){
   if(speicherTimeout) clearTimeout(speicherTimeout);
   speicherTimeout = setTimeout(async ()=>{
-    const { data } = await sb.from('slf_state').select('state').eq('id',1).single();
-    let s = Object.assign(JSON.parse(JSON.stringify(LEER)), data?.state||{});
-    if(s.phase!=='running') return;
-    s.antworten = s.antworten || {};
-    s.antworten[myName] = Object.assign({}, localAntworten);
-    state = s;
-    await saveState();
+    // Nur den EIGENEN Teilbaum schreiben. Vorher las jeder den
+    // ganzen Stand und schrieb ihn zurueck - bei sechs Leuten,
+    // die alle gleichzeitig tippen, ueberschreiben sich die
+    // Antworten dabei staendig gegenseitig.
+    const { data, error } = await sb.rpc('slf_antworten_setzen', {
+      p_name: myName,
+      p_antworten: Object.assign({}, localAntworten)
+    });
+    if(error){
+      console.warn('slf_antworten_setzen nicht verfuegbar, nutze Rueckfall:', error.message);
+      const r = await sb.from('slf_state').select('state').eq('id',1).single();
+      if(r.error || !r.data || !r.data.state) return;
+      let s = Object.assign(JSON.parse(JSON.stringify(LEER)), r.data.state);
+      if(s.phase!=='running') return;
+      s.antworten = s.antworten || {};
+      s.antworten[myName] = Object.assign({}, localAntworten);
+      state = s;
+      await saveState();
+      return;
+    }
+    if(data) state = Object.assign(JSON.parse(JSON.stringify(LEER)), data);
   }, 500);
 }
 
