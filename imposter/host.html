@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <style>
@@ -243,13 +244,19 @@ async function loadState(){
   render();
 }
 loadState();
-setInterval(loadState, 1500);
-
-sb.channel('imp_state_channel')
-  .on('postgres_changes', { event:'*', schema:'public', table:'imp_state' }, payload=>{
-    state = payload.new.state || {};
-    render();
-  }).subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'imp_state',
+    laden: async function(){ await loadState(); }
+  });
+} else {
+  setInterval(loadState, 2000);
+}
 </script>
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
