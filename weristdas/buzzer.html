@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <style>
@@ -106,8 +107,11 @@ document.getElementById('joinBtn').onclick = async ()=>{
   if(!val) return;
   myName = val;
   localStorage.setItem('wid_name', myName);
-  const { data } = await sb.from('wid_state').select('state').eq('id',1).single();
-  const s = data?.state || {};
+  const { data, error: leseFehler } = await sb.from('wid_state').select('state').eq('id', 1).single();
+  // Bei Lesefehler NICHT weiterschreiben - sonst wuerde ein
+  // leeres Objekt den ganzen Spielstand ueberschreiben.
+  if(leseFehler || !data || !data.state) return;
+  const s = data.state;
   s.players = s.players || {};
   if(s.players[myName]==null) s.players[myName] = 0;
   await sb.from('wid_state').update({ state: s }).eq('id',1);
@@ -123,13 +127,19 @@ async function loadState(){
   render();
 }
 loadState();
-setInterval(loadState, 2000);
-
-sb.channel('wid_state_channel_buzz')
-  .on('postgres_changes', { event:'*', schema:'public', table:'wid_state' }, payload=>{
-    state = payload.new.state || state;
-    render();
-  }).subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'wid_state',
+    laden: async function(){ await loadState(); }
+  });
+} else {
+  setInterval(loadState, 2000);
+}
 
 function render(){
   const hasImage = state.imageIndex!=null;
@@ -156,14 +166,34 @@ function render(){
 
 async function doBuzz(){
   if(buzzBtn.disabled) return;
-  const { data } = await sb.from('wid_state').select('state').eq('id',1).single();
-  const s = data?.state || {};
-  if(s.imageIndex==null || s.solved) return;
-  s.buzzQueue = s.buzzQueue || [];
-  if(!s.buzzQueue.includes(myName)) s.buzzQueue.push(myName);
 
-  if(s.frozenAt == null) s.frozenAt = Date.now();
-  await sb.from('wid_state').update({ state: s }).eq('id',1);
+  // Vorpruefung im Browser: spart einen Aufruf, wenn ohnehin nichts geht
+  const { data, error: leseFehler } = await sb.from('wid_state').select('state').eq('id', 1).single();
+  // Bei Lesefehler NICHT weiterschreiben - sonst wuerde ein
+  // leeres Objekt den ganzen Spielstand ueberschreiben.
+  if(leseFehler || !data || !data.state) return;
+  const s = data.state;
+  if(s.imageIndex==null || s.solved) return;
+  if((s.buzzQueue||[]).includes(myName)) return;
+  if((s.buzzedOut||[]).includes(myName)) return;
+
+  // Anhaengen macht die Datenbank selbst - so kann kein zweiter
+  // Buzzer den ersten ueberschreiben.
+  const { error } = await sb.rpc('buzz_anhaengen', {
+    p_tabelle: 'wid_state', p_name: myName, p_frozen: true
+  });
+
+  if(error){
+    // Rueckfall, falls die SQL-Funktion noch nicht angelegt ist
+    console.warn('buzz_anhaengen nicht verfuegbar, nutze Rueckfall:', error.message);
+    const { data: d2 } = await sb.from('wid_state').select('state').eq('id',1).single();
+    if(!d2 || !d2.state) return;
+    const s2 = d2.state;
+    s2.buzzQueue = s2.buzzQueue || [];
+    if(!s2.buzzQueue.includes(myName)) s2.buzzQueue.push(myName);
+    if(s2.frozenAt == null) s2.frozenAt = Date.now();
+    await sb.from('wid_state').update({ state: s2 }).eq('id',1);
+  }
 }
 
 buzzBtn.addEventListener('click', doBuzz);
