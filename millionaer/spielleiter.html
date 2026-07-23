@@ -138,13 +138,21 @@
 const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
 const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let autoAufloesen = false;
 
 const LETTERS = ['A','B','C','D'];
 let state = null;
 
 async function load(){
-  const { data } = await sb.from('wwm_state').select('state').eq('id',1).single();
-  state = data?.state || {};
+  const { data, error } = await sb.from('wwm_state').select('state').eq('id',1).single();
+  // Bei Lesefehler den alten Stand behalten statt ihn zu leeren.
+  // Frueher wurde hier {} gesetzt - der naechste save() hat damit
+  // den kompletten Spielstand ueberschrieben.
+  if(error || !data || !data.state){
+    console.warn('wwm_state konnte nicht gelesen werden:', error && error.message);
+    return null;
+  }
+  state = data.state;
   state.players = state.players || {};
   state.answers = state.answers || {};
   state.gone = state.gone || {};
@@ -158,6 +166,7 @@ async function save(s){
 
 async function nextQ(){
   const s = await load();
+  if(!s) return;
   const next = (s.qIndex == null) ? 0 : s.qIndex + 1;
   if(next >= WWM_FRAGEN.length){ alert('Alle 30 Fragen gespielt.'); return; }
   s.qIndex = next;
@@ -171,6 +180,7 @@ async function nextQ(){
 
 async function prevQ(){
   const s = await load();
+  if(!s) return;
   if(s.qIndex == null || s.qIndex === 0) return;
   s.qIndex -= 1;
   s.phase = 'frage';
@@ -183,6 +193,7 @@ async function prevQ(){
 
 async function solve(){
   const s = await load();
+  if(!s) return;
   if(s.phase !== 'frage' || s.qIndex == null) return;
   const q = WWM_FRAGEN[s.qIndex];
   const p = wwmPunkte(s.qIndex);
@@ -207,6 +218,7 @@ async function solve(){
 async function kick(name){
   if(!confirm(`${name} aus dem Spiel entfernen? Punkte und Joker gehen verloren.`)) return;
   const s = await load();
+  if(!s) return;
   delete s.players[name];
   delete s.answers[name];
   delete s.gone[name];
@@ -219,6 +231,7 @@ async function kick(name){
 async function reset(){
   if(!confirm('Spiel komplett zurücksetzen? Alle Punkte und Joker werden neu vergeben.')) return;
   const s = await load();
+  if(!s) return;
   Object.keys(s.players).forEach(n => {
     s.players[n] = { score:0, jokers:{ '5050':true, 'spy':true, 'risk':true } };
   });
@@ -266,6 +279,22 @@ function render(){
 
   const pl = document.getElementById('plist');
   const namen = Object.keys(state.players);
+
+  // Haben alle geantwortet, loest die Frage von selbst auf.
+  // Der Knopf bleibt, falls jemand aussetzt oder du frueher willst.
+  if(phase === 'frage' && namen.length && !autoAufloesen){
+    const offen = namen.filter(n => state.answers[n] == null);
+    if(offen.length === 0){
+      autoAufloesen = true;
+      setTimeout(async () => {
+        autoAufloesen = false;
+        const s2 = await load();
+        if(!s2 || s2.phase !== 'frage') return;
+        const nochOffen = Object.keys(s2.players).filter(n => s2.answers[n] == null);
+        if(nochOffen.length === 0) await solve();
+      }, 1200);
+    }
+  }
   pl.innerHTML = !namen.length
     ? '<div style="color:var(--muted);font-size:13px;">Noch niemand beigetreten.</div>'
     : namen.map(n => {
@@ -312,7 +341,7 @@ document.getElementById('btnPrev').onclick = prevQ;
 document.getElementById('btnSolve').onclick = solve;
 document.getElementById('btnReset').onclick = reset;
 
-async function tick(){ await load(); render(); }
+async function tick(){ const s = await load(); if(!s) return; render(); }
 tick();
 setInterval(tick, 1500);
 sb.channel('wwm_sl')
