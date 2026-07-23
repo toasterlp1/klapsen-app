@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <style>
@@ -128,8 +129,13 @@ $('btnEnde').addEventListener('click', async () => {
     if(s.ist_echt){
       add(s.spieler, 2);
     } else {
-      const opfer = luegen.find(l => l.text.toLowerCase() === s.gewaehlt.toLowerCase());
-      if(opfer && opfer.spieler !== s.spieler) add(opfer.spieler, 1);
+      // Bei identischen Luegen bekommen alle Urheber den Punkt.
+      // Vorher zaehlte nur der erste Treffer - der zweite ging leer aus,
+      // obwohl jemand auf seine Luege reingefallen ist.
+      luegen
+        .filter(l => l.text.toLowerCase() === s.gewaehlt.toLowerCase())
+        .filter(l => l.spieler !== s.spieler)
+        .forEach(l => add(l.spieler, 1));
     }
   });
 
@@ -152,6 +158,8 @@ function abonniere(){
     .subscribe();
 }
 
+let autoWechselLaeuft = false;
+
 async function aktualisiere(){
   const NAMEN = { luegen:'Lügen', raten:'Raten', aufloesung:'Auflösung', ende:'Beendet' };
   $('phaseAnzeige').textContent = NAMEN[phase] || phase;
@@ -161,17 +169,54 @@ async function aktualisiere(){
   const luegen = lg.data || [];
   const stimmen = st.data || [];
 
+  // Wie viele sind ueberhaupt dabei? Aus avatare.js, wie beim Host.
+  const crewGroesse = (typeof AVATARE === 'object' && AVATARE)
+    ? Object.keys(AVATARE).length : 0;
+
   if(phase === 'luegen'){
-    $('zaehler').textContent = luegen.length + ' Lügen abgegeben';
+    const rest = crewGroesse ? Math.max(0, crewGroesse - luegen.length) : null;
+    $('zaehler').textContent = luegen.length + ' Lügen abgegeben' +
+      (rest !== null ? (rest > 0 ? ' — noch ' + rest + ' offen' : ' — alle da') : '');
     $('liste').innerHTML = luegen.map(l =>
       '<div class="eintrag"><span>' + l.spieler + '</span><span>' + l.text + '</span></div>'
     ).join('');
+
+    // Sind alle durch, geht es von selbst weiter. Der Knopf bleibt
+    // trotzdem da, falls jemand aussetzt oder du frueher willst.
+    if(crewGroesse && luegen.length >= crewGroesse && !autoWechselLaeuft){
+      autoWechselLaeuft = true;
+      setTimeout(async () => {
+        autoWechselLaeuft = false;
+        // Nochmal pruefen - in der Zwischenzeit kann sich was geaendert haben
+        const p2 = await sb.from('bluff_runden').select('phase').eq('id', rundeId).single();
+        if(p2.data && p2.data.phase === 'luegen'){
+          await sb.from('bluff_runden').update({ phase:'raten' }).eq('id', rundeId);
+          phase = 'raten';
+          aktualisiere();
+        }
+      }, 1500);
+    }
   } else {
-    $('zaehler').textContent = stimmen.length + ' Stimmen abgegeben';
+    const rest = crewGroesse ? Math.max(0, crewGroesse - stimmen.length) : null;
+    $('zaehler').textContent = stimmen.length + ' Stimmen abgegeben' +
+      (rest !== null ? (rest > 0 ? ' — noch ' + rest + ' offen' : ' — alle da') : '');
     $('liste').innerHTML = stimmen.map(s =>
       '<div class="eintrag"><span>' + s.spieler + '</span><span class="' + (s.ist_echt ? 'echt' : '') + '">' +
       s.gewaehlt + (s.ist_echt ? ' (echt)' : '') + '</span></div>'
     ).join('');
+
+    if(phase === 'raten' && crewGroesse && stimmen.length >= crewGroesse && !autoWechselLaeuft){
+      autoWechselLaeuft = true;
+      setTimeout(async () => {
+        autoWechselLaeuft = false;
+        const p2 = await sb.from('bluff_runden').select('phase').eq('id', rundeId).single();
+        if(p2.data && p2.data.phase === 'raten'){
+          await sb.from('bluff_runden').update({ phase:'aufloesung', aufgedeckt:true }).eq('id', rundeId);
+          phase = 'aufloesung';
+          aktualisiere();
+        }
+      }, 1500);
+    }
   }
 }
 
