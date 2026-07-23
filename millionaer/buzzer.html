@@ -223,6 +223,7 @@ document.getElementById('joinBtn').onclick = async () => {
   myName = val;
   localStorage.setItem('wwm_name', myName);
   const s = await load();
+  if(!s) return;
   s.players = s.players || {};
   if(s.players[myName] == null) s.players[myName] = { score:0, jokers:{ '5050':true, 'spy':true, 'risk':true } };
   await save(s);
@@ -231,8 +232,15 @@ document.getElementById('joinBtn').onclick = async () => {
 };
 
 async function load(){
-  const { data } = await sb.from('wwm_state').select('state').eq('id',1).single();
-  state = data?.state || {};
+  const { data, error } = await sb.from('wwm_state').select('state').eq('id',1).single();
+  // Bei Lesefehler den alten Stand behalten statt ihn zu leeren.
+  // Frueher wurde hier {} gesetzt - der naechste save() hat damit
+  // den kompletten Spielstand ueberschrieben.
+  if(error || !data || !data.state){
+    console.warn('wwm_state konnte nicht gelesen werden:', error && error.message);
+    return null;
+  }
+  state = data.state;
   state.players = state.players || {};
   state.answers = state.answers || {};
   state.usedJoker = state.usedJoker || null;
@@ -245,36 +253,77 @@ async function save(s){
 }
 
 async function answer(idx){
+  // Vorpruefung im Browser spart einen Aufruf, wenn ohnehin nichts geht
   const s = await load();
+  if(!s) return;
   if(s.phase !== 'frage') return;
   if(s.answers[myName] != null) return;
-  s.answers[myName] = idx;
-  await save(s);
+
+  // Eintragen macht die Datenbank selbst. Sonst ueberschreiben
+  // sich gleichzeitige Antworten gegenseitig - bei einer leichten
+  // Frage klicken alle im selben Moment.
+  const { data, error } = await sb.rpc('wwm_antwort_setzen', {
+    p_name: myName, p_index: idx
+  });
+
+  if(error){
+    console.warn('wwm_antwort_setzen nicht verfuegbar, nutze Rueckfall:', error.message);
+    const s2 = await load();
+    if(!s2 || s2.phase !== 'frage' || s2.answers[myName] != null) return;
+    s2.answers[myName] = idx;
+    await save(s2);
+  } else if(data){
+    state = data;
+  }
   render();
 }
 
 async function useJoker(typ){
   const s = await load();
+  if(!s) return;
   if(s.phase !== 'frage') return;
   if(s.usedJoker) return;
   const me = s.players[myName];
   if(!me || !me.jokers[typ]) return;
   if(typ !== 'risk' && s.answers[myName] != null) return;
 
-  me.jokers[typ] = false;
-  s.usedJoker = { name: myName, typ };
+  // Den Joker vergibt die Datenbank, damit bei gleichzeitigem
+  // Klick nicht zwei Spieler denselben Slot bekommen.
+  const { data, error } = await sb.rpc('wwm_joker_ziehen', {
+    p_name: myName, p_typ: typ
+  });
 
+  let s2;
+  if(error){
+    console.warn('wwm_joker_ziehen nicht verfuegbar, nutze Rueckfall:', error.message);
+    s2 = await load();
+    if(!s2 || s2.usedJoker) return;
+    const me2 = s2.players[myName];
+    if(!me2 || !me2.jokers[typ]) return;
+    me2.jokers[typ] = false;
+    s2.usedJoker = { name: myName, typ };
+  } else {
+    s2 = data;
+    if(!s2) return;
+    // Ein anderer war schneller
+    if(!s2.usedJoker || s2.usedJoker.name !== myName) { state = s2; render(); return; }
+  }
+
+  // 50/50 wuerfelt die zwei wegfallenden Antworten erst hier aus.
   if(typ === '5050'){
-    const q = WWM_FRAGEN[s.qIndex];
+    const q = WWM_FRAGEN[s2.qIndex];
     const falsche = [0,1,2,3].filter(i => i !== q.richtig);
-
     for(let i = falsche.length - 1; i > 0; i--){
       const j = Math.floor(Math.random() * (i+1));
       [falsche[i], falsche[j]] = [falsche[j], falsche[i]];
     }
-    s.gone[myName] = falsche.slice(0,2);
+    s2.gone = s2.gone || {};
+    s2.gone[myName] = falsche.slice(0,2);
+    await save(s2);
+  } else if(error){
+    await save(s2);
   }
-  await save(s);
+  state = s2;
   render();
 }
 
@@ -395,7 +444,7 @@ function render(){
   }
 }
 
-async function tick(){ await load(); render(); }
+async function tick(){ const s = await load(); if(!s) return; render(); }
 tick();
 setInterval(tick, 1500);
 sb.channel('wwm_buzz')
