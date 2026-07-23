@@ -99,7 +99,7 @@ const SITUATIONEN = [
   "Dein Partner fragt, warum das Auto nach Pommes riecht.",
   "Du wirst gefragt, warum du die Party um 21 Uhr verlassen hast.",
   "Die Wirtin fragt, warum ein Stuhl fehlt.",
-  "Du hast im Museum ein Absperrband gerissen."
+  "Du hast im Museum ein Absperrband gerissen.",
   "Du stehst um 3 Uhr nachts in der Küche deines Nachbarn. Er macht das Licht an.",
   "Dein Chef findet heraus, dass du seit zwei Wochen im falschen Büro sitzt.",
   "Du hast das Auto deines Vaters zurückgebracht. Es ist jetzt gelb.",
