@@ -387,9 +387,14 @@ async function zeichne(){
       if(s.ist_echt){
         rundePunkte[s.spieler] = (rundePunkte[s.spieler] || 0) + 2;
       } else {
-        const opfer = luegen.find(l => l.text.toLowerCase() === s.gewaehlt.toLowerCase());
-        if(opfer && opfer.spieler !== s.spieler)
-          rundePunkte[opfer.spieler] = (rundePunkte[opfer.spieler] || 0) + 1;
+        // Falls zwei dieselbe Luege eingetragen haben, bekommen BEIDE
+        // den Punkt - vorher zaehlte nur der erste Treffer.
+        luegen
+          .filter(l => l.text.toLowerCase() === s.gewaehlt.toLowerCase())
+          .filter(l => l.spieler !== s.spieler)
+          .forEach(l => {
+            rundePunkte[l.spieler] = (rundePunkte[l.spieler] || 0) + 1;
+          });
       }
     });
   }
