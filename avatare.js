@@ -4,9 +4,6 @@ const AVATARE = {
   "ügelibügeli": "https://cdn.discordapp.com/avatars/758271488045350912/12300b63fc57de58b01a3a3408a21f80.webp?size=256",
   "cijäy": "https://cdn.discordapp.com/avatars/756944039160578129/b27f04ad8e3d620d1a0760ac277e6543.webp?size=256",
   "töbi": "https://cdn.discordapp.com/avatars/205076563593527297/0956f387e30864f0b795d99c8d1ff34b.webp?size=256",
-  "sämöä": "https://cdn.discordapp.com/avatars/766392871396835381/d0603e4212397934c072b5b910be0d83.webp?size=256",
-  "künze": "https://cdn.discordapp.com/avatars/382635436419317773/d8d6f0a300add7455e205f326932a059.webp?size=256",
-  "timäy": "https://cdn.discordapp.com/avatars/1147184433078738994/c898d519b767d59b265d3d06aba1cfbd.webp?size=256",
   "töster": "https://cdn.discordapp.com/avatars/809064080790388788/363545deb70181b55f6ee50ddc77f6d0.webp?size=256",
   "älex": "https://cdn.discordapp.com/avatars/1123315501205045358/303743e9efe0d3a644cada7957c9fcfe.webp?size=256",
 };
