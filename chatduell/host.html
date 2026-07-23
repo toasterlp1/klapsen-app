@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="../host-fx.js"></script>
@@ -490,7 +491,8 @@ function render(){
     teamA={score:0}, teamB={score:0}, players={},
     answers=[], phase='idle', pot=0, lastResult=null,
     activePlayer=null, buzzFlashName=null, buzzFlashAt=null, stealFlashAt=null,
-    controllingTeam=null, controlLives=3
+    controllingTeam=null, controlLives=3,
+    stealTeam=null, potOwner=null, round=0
   } = state;
   const currentFrage = state.currentFrage;
 
@@ -516,13 +518,24 @@ function render(){
     lastScoreB = teamB.score;
   }
 
-  document.getElementById('teamPanelA').classList.toggle('turn-a', phase==='playing' && controllingTeam==='A');
-  document.getElementById('teamPanelB').classList.toggle('turn-b', phase==='playing' && controllingTeam==='B');
+  // Im Steal leuchtet das stehlende Team, sonst das kontrollierende
+  const leuchtA = (phase==='playing' && controllingTeam==='A') || (phase==='steal' && stealTeam==='A');
+  const leuchtB = (phase==='playing' && controllingTeam==='B') || (phase==='steal' && stealTeam==='B');
+  document.getElementById('teamPanelA').classList.toggle('turn-a', leuchtA);
+  document.getElementById('teamPanelB').classList.toggle('turn-b', leuchtB);
 
   ['A','B'].forEach(team=>{
     const badge = document.getElementById('badge'+team);
     badge.classList.remove('control','opponent','faceoff','visible');
-    if(phase==='playing' || phase==='manual'){
+    if(phase==='steal'){
+      if(stealTeam===team){
+        badge.textContent = 'STEAL — eine Chance';
+        badge.classList.add('control','visible');
+      } else {
+        badge.textContent = 'Pot in Gefahr';
+        badge.classList.add('opponent','visible');
+      }
+    } else if(phase==='playing' || phase==='manual'){
       if(controllingTeam===team){
         badge.textContent = 'In Control';
         badge.classList.add('control','visible');
@@ -573,10 +586,16 @@ return `<div class="player-chip ${isActive?'active ka-live-green':''}" style="po
   const onairText = document.getElementById('onairText');
   const answersGrid = document.getElementById('answersGrid');
   const roundNumEl = document.getElementById('roundNum');
-  if(roundNumEl) roundNumEl.textContent = (state.round != null ? state.round : '–');
+  if(roundNumEl){
+    const r = (state.round != null && state.round > 0) ? state.round : null;
+    roundNumEl.textContent = r ? String(r) : '–';
+  }
   const resultBanner = document.getElementById('resultBanner');
 
-  if((phase==='playing' || phase==='faceoff') && activePlayer){
+  if(phase==='steal'){
+    onairText.textContent = `Team ${stealTeam} stiehlt — eine Chance`;
+    onairPill.classList.add('show');
+  } else if((phase==='playing' || phase==='faceoff') && activePlayer){
     onairText.textContent = `${activePlayer} ist dran`;
     onairPill.classList.add('show');
   } else {
@@ -684,13 +703,19 @@ async function loadState(){
   render();
 }
 loadState();
-setInterval(loadState, 2000);
-
-sb.channel('cd_state_channel')
-  .on('postgres_changes', { event:'*', schema:'public', table:'cd_state' }, payload=>{
-    state = payload.new.state || {};
-    render();
-  }).subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'cd_state',
+    laden: async function(){ await loadState(); }
+  });
+} else {
+  setInterval(loadState, 2000);
+}
 </script>
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
