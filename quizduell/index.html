@@ -1007,7 +1007,10 @@ function nextPlayerId(afterId){
 
 async function openQuestion(boardNum,catName,lvl,points,q){
   if(!q){toast("Keine Frage hinterlegt");return}
-  const owner = nextPlayerId(state.turn_player_id);
+  // Wer dran ist, steht schon fest - closeQuestion() hat den Turn
+  // beim letzten Schliessen weitergeschaltet. Nur beim allerersten
+  // Mal muss hier noch jemand bestimmt werden.
+  const owner = state.turn_player_id || nextPlayerId(null);
   const buzzVal = Math.floor(points/2);
   await sb.from('quiz_state').update({
     phase:'question',
@@ -1197,6 +1200,29 @@ async function judge(correct){
   } else {
     await changeScore(answeringId, -Math.floor(val/2));
     const alreadyBuzzed=[...(state.already_buzzed||[]), answeringId];
+
+    // Haben alle einmal daneben gelegen, gibt es niemanden mehr,
+    // der buzzern koennte. Dann direkt aufloesen statt den Buzzer
+    // offen zu lassen, bis der Spielleiter es selbst merkt.
+    const nochOffen = players.filter(p => !alreadyBuzzed.includes(p.id));
+    if(nochOffen.length === 0){
+      const played=[...new Set([...(state.played_questions||[]), qKey(q.board,q.category,q.points)])];
+      await sb.from('quiz_state').update({
+        result_kind:'reveal',
+        answer_revealed:true,
+        is_owner_phase:false,
+        buzzer_open:false,
+        buzzed_player_id:null,
+        already_buzzed:alreadyBuzzed,
+        played_questions:played,
+        result_text:'Niemand hatte die richtige Antwort.',
+        updated_at:new Date().toISOString()
+      }).eq('id',1);
+      toast("Alle daneben – Antwort wird aufgelöst");
+      scheduleClose(REVEAL_AUTOCLOSE_MS);
+      return;
+    }
+
     await sb.from('quiz_state').update({
       result_kind:'wrong',
       is_owner_phase:false,
@@ -1227,12 +1253,17 @@ function scheduleClose(ms){
 
 async function closeQuestion(){
   clearTimeout(revealTimer);
+  // Der Turn wandert schon beim Schliessen weiter, nicht erst beim
+  // Oeffnen der naechsten Frage. Sonst stand auf dem Board noch der
+  // alte Name, obwohl laengst jemand anders dran ist.
+  const naechster = nextPlayerId(state && state.turn_player_id);
   await sb.from('quiz_state').update({
     phase:'board', current_question:null,
     owner_player_id:null, buzzed_player_id:null, buzzer_open:false,
     is_owner_phase:true, already_buzzed:[],
     answer_revealed:false, result_text:null, result_kind:null,
     joker_from_id:null,
+    turn_player_id:naechster,
     updated_at:new Date().toISOString()
   }).eq('id',1);
 }
