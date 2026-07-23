@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="../host-fx.js"></script>
@@ -329,9 +330,13 @@ async function zeichne(){
   // Punkte dieser Runde: je Stimme ein Punkt fuer den Autor
   const rundePunkte = {};
   stimmen.forEach(s => {
-    const ziel = ausreden.find(a => a.text.toLowerCase() === String(s.gewaehlt).toLowerCase());
-    if(ziel && ziel.spieler !== s.spieler)
-      rundePunkte[ziel.spieler] = (rundePunkte[ziel.spieler] || 0) + 1;
+    // Bei gleichlautenden Ausreden bekommen ALLE Urheber den Punkt.
+    ausreden
+      .filter(a => a.text.toLowerCase() === String(s.gewaehlt).toLowerCase())
+      .filter(a => a.spieler !== s.spieler)
+      .forEach(a => {
+        rundePunkte[a.spieler] = (rundePunkte[a.spieler] || 0) + 1;
+      });
   });
 
   const zeigeRunde = (runde.phase === 'aufloesung');
@@ -488,13 +493,19 @@ function patchScoreboard(ges, rundePunkte, zeigeRunde){
 
 if(sb){
   zeichne();
-  sb.channel('ausreden-host')
-    .on('postgres_changes', { event:'*', schema:'public', table:'ausreden_runden' }, zeichne)
-    .on('postgres_changes', { event:'*', schema:'public', table:'ausreden_texte' }, zeichne)
-    .on('postgres_changes', { event:'*', schema:'public', table:'ausreden_stimmen' }, zeichne)
-    .on('postgres_changes', { event:'*', schema:'public', table:'ergebnisse' }, zeichne)
-    .subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'ausreden_runden',
+    laden: async function(){ await zeichne(); }
+  });
+} else {
   setInterval(zeichne, 2000);
+}
 }
 </script>
 <script src="../zurueck.js"></script>
