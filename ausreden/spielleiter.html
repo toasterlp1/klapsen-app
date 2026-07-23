@@ -7,9 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="situationen.js"></script>
+<script src="../bestenliste.js"></script>
 <style>
   :root{
     --bg:#07100c; --panel:#0d2318; --panel-border:#1c4030;
@@ -83,6 +86,7 @@ let runde = null;
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const crew = () => (typeof AVATARE !== 'undefined') ? Object.keys(AVATARE) : [];
+let autoLaeuft = false;
 
 document.getElementById('btnZufall').onclick = () => {
   const s = window.SITUATIONEN || [];
@@ -121,16 +125,33 @@ document.getElementById('btnPunkte').onclick = async () => {
   const stimmen = st.data || [];
 
   const punkte = {};
+  // Jeder, der eine Ausrede abgegeben hat, taucht auf - auch mit 0.
+  // Sonst fehlen die Verlierer komplett in der Bestenliste.
+  ausreden.forEach(a => { punkte[a.spieler] = punkte[a.spieler] || 0; });
+
   stimmen.forEach(s => {
-    const ziel = ausreden.find(a => a.text.toLowerCase() === String(s.gewaehlt).toLowerCase());
-    if(ziel && ziel.spieler !== s.spieler)
-      punkte[ziel.spieler] = (punkte[ziel.spieler] || 0) + 1;
+    // Bei gleichlautenden Ausreden bekommen ALLE Urheber den Punkt.
+    // Vorher nahm find() nur den ersten Treffer.
+    ausreden
+      .filter(a => a.text.toLowerCase() === String(s.gewaehlt).toLowerCase())
+      .filter(a => a.spieler !== s.spieler)
+      .forEach(a => { punkte[a.spieler] = (punkte[a.spieler] || 0) + 1; });
   });
 
-  const zeilen = Object.keys(punkte).map(n => ({
-    format:'ausreden', spieler:n, punkte:punkte[n]
-  }));
-  if(zeilen.length) await sb.from('ergebnisse').insert(zeilen);
+  const zeilen = Object.keys(punkte).map(n => ({ spieler:n, punkte:punkte[n] }));
+
+  // Ueber das gemeinsame Modul speichern: es vergibt Platz und
+  // runde_id. Ohne platz zaehlt die Bestenliste keine Siege -
+  // Ausreden-Gewinne waren dort bisher unsichtbar.
+  if(zeilen.length){
+    if(typeof speichereErgebnisse === 'function'){
+      await speichereErgebnisse('ausreden', zeilen);
+    } else {
+      await sb.from('ergebnisse').insert(
+        zeilen.map(z => ({ format:'ausreden', spieler:z.spieler, punkte:z.punkte }))
+      );
+    }
+  }
 
   btn.disabled = false;
   btn.textContent = 'Punkte vergeben ✓';
@@ -166,6 +187,28 @@ async function lade(){
   else if(runde.phase === 'abstimmen') zaehlEl.textContent = stimmen.length + ' / ' + gesamt + ' gestimmt';
   else zaehlEl.textContent = '';
 
+  // Sind alle durch, geht die Runde von selbst weiter.
+  // Die Knoepfe bleiben, falls jemand aussetzt oder du frueher willst.
+  if(gesamt && !autoLaeuft){
+    const alleGeschrieben = runde.phase === 'schreiben' && ausreden.length >= gesamt;
+    const alleGestimmt    = runde.phase === 'abstimmen' && stimmen.length  >= gesamt;
+    if(alleGeschrieben || alleGestimmt){
+      autoLaeuft = true;
+      const ziel = alleGeschrieben ? 'abstimmen' : 'aufloesung';
+      const von  = runde.phase;
+      setTimeout(async () => {
+        autoLaeuft = false;
+        // Zwischenzeitliche Aenderungen respektieren
+        const r2 = await sb.from('ausreden_runden')
+          .select('phase').eq('id', runde.id).maybeSingle();
+        if(r2.data && r2.data.phase === von){
+          await sb.from('ausreden_runden').update({ phase: ziel }).eq('id', runde.id);
+          lade();
+        }
+      }, 1500);
+    }
+  }
+
   const zaehlung = {};
   stimmen.forEach(s => {
     const k = String(s.gewaehlt).toLowerCase();
@@ -188,12 +231,19 @@ async function lade(){
 
 if(sb){
   lade();
-  sb.channel('ausreden-sl')
-    .on('postgres_changes', { event:'*', schema:'public', table:'ausreden_runden' }, lade)
-    .on('postgres_changes', { event:'*', schema:'public', table:'ausreden_texte' }, lade)
-    .on('postgres_changes', { event:'*', schema:'public', table:'ausreden_stimmen' }, lade)
-    .subscribe();
-  setInterval(lade, 2500);
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'ausreden_runden',
+    laden: async function(){ await lade(); }
+  });
+} else {
+  setInterval(lade, 2000);
+}
 }
 </script>
 <script src="../zurueck.js"></script>
