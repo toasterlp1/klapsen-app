@@ -18,8 +18,36 @@ function bl_client(){
   return window.KA_SB || null;
 }
 
+// Welche Gruppe gerade spielt.
+// Bisher rief das eine Funktion aktuelleGruppe() auf, die es
+// nirgends im Projekt gab - alles landete unter 'standard' und
+// die Bestenliste zeigte samtliche Gruppen gemischt.
+// Jetzt haengt es an avatare.js: wer dort steht, bildet die Crew.
 function bl_gruppe(){
-  return (typeof aktuelleGruppe === 'function') ? aktuelleGruppe() : 'standard';
+  if(typeof aktuelleGruppe === 'function'){
+    try { return aktuelleGruppe() || 'standard'; } catch(e){}
+  }
+  // Von Hand gesetzt (localStorage) hat Vorrang
+  try {
+    const gesetzt = localStorage.getItem('ka_gruppe');
+    if(gesetzt) return gesetzt;
+  } catch(e){}
+  // Sonst aus avatare.js ableiten: der Kommentar in Zeile 1
+  // benennt die Gruppe, ersatzweise die Namen selbst.
+  if(typeof AVATARE === 'object' && AVATARE){
+    if(typeof AVATARE_GRUPPE === 'string' && AVATARE_GRUPPE) return AVATARE_GRUPPE;
+  }
+  return 'standard';
+}
+
+// Nur Spieler aus avatare.js zaehlen.
+// Ohne diesen Filter tauchten in der Rangliste alle Namen auf,
+// die je gespielt haben - auch aus anderen Freundeskreisen.
+function bl_gehoertZurCrew(name){
+  if(typeof AVATARE !== 'object' || !AVATARE) return true;
+  const crew = Object.keys(AVATARE);
+  if(!crew.length) return true;
+  return crew.indexOf(name) >= 0;
 }
 
 async function speichereErgebnisse(format, ergebnisse){
@@ -61,6 +89,8 @@ async function ladeBestenliste(){
   const proFormat = {};
 
   data.forEach(r => {
+    // Fremde Namen aus anderen Freundeskreisen ueberspringen
+    if(!bl_gehoertZurCrew(r.spieler)) return;
     if(!gesamt[r.spieler]) gesamt[r.spieler] = { spieler:r.spieler, punkte:0, siege:0, spiele:0 };
     gesamt[r.spieler].punkte += r.punkte;
     gesamt[r.spieler].spiele += 1;
@@ -98,6 +128,7 @@ async function ladeSpielerStatistiken(){
 
   const runden = {};
   data.forEach(r => {
+    if(!bl_gehoertZurCrew(r.spieler)) return;
     if(!runden[r.runde_id]) runden[r.runde_id] = { format:r.format, eintraege:[] };
     runden[r.runde_id].eintraege.push({ spieler:r.spieler, punkte:r.punkte, platz:r.platz });
   });
@@ -112,6 +143,7 @@ async function ladeSpielerStatistiken(){
   }
 
   data.forEach(r => {
+    if(!bl_gehoertZurCrew(r.spieler)) return;
     const s = slot(r.spieler);
     s.spiele += 1;
     s.punkte += r.punkte;
