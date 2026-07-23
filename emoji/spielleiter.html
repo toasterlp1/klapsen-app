@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script src="./raetsel.js"></script>
@@ -258,6 +259,7 @@ document.getElementById('btnNewRound').onclick = async ()=>{
   state.buzzedOut = [];
 
   state.timerRunning = true;
+  state.restMs = null;
   state.revealAt = Date.now() + REVEAL_SEKUNDEN * 1000;
   await saveState();
 };
@@ -282,7 +284,14 @@ setInterval(async () => {
   if(state.revealedCount >= 4) return;
   if(!state.timerRunning || !state.revealAt) return;
 
-  if(activeBuzzer()) return;
+  // Jemand hat gebuzzert: Restzeit festhalten und Timer anhalten.
+  if(activeBuzzer()){
+    if(state.restMs == null && state.revealAt){
+      state.restMs = Math.max(0, state.revealAt - Date.now());
+      await saveState();
+    }
+    return;
+  }
   if(Date.now() < state.revealAt) return;
 
   state.revealedCount += 1;
@@ -295,9 +304,16 @@ setInterval(async () => {
   await saveState();
 }, 500);
 
+// Beim Buzzern wird die Restzeit eingefroren, nach einer falschen
+// Antwort laeuft sie genau dort weiter. Vorher gab es 12 frische
+// Sekunden - ein Fehlversuch machte das Raetsel dadurch leichter.
 async function timerFortsetzen(){
   if(state.revealedCount < 4 && !state.solved){
-    state.revealAt = Date.now() + REVEAL_SEKUNDEN * 1000;
+    const rest = (state.restMs != null)
+      ? state.restMs
+      : REVEAL_SEKUNDEN * 1000;
+    state.revealAt = Date.now() + Math.max(500, rest);
+    state.restMs = null;
     state.timerRunning = true;
   }
 }
