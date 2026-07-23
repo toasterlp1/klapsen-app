@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="./questions.js"></script>
 <style>
@@ -176,6 +178,29 @@
       </div>
     </div>
 
+    <div id="stealSection" style="display:none;">
+      <div class="box" style="border-color:#f5c542;">
+        <div class="lbl" style="color:#f5c542;">STEAL — ein einziger Versuch</div>
+        <div id="stealInfo" class="small" style="margin:6px 0 10px;"></div>
+        <div class="row">
+          <button class="btn-bad" id="btnStealMiss">Daneben — Pot bleibt beim Gegner</button>
+        </div>
+        <div class="small" style="margin-top:6px;">
+          Trifft das Team: die genannte Antwort unten anklicken.
+        </div>
+      </div>
+    </div>
+
+    <div id="fruehSection" style="display:none;">
+      <div class="row">
+        <button class="btn-primary" id="btnPotKassieren">Runde beenden &amp; Pot ans Team</button>
+        <button class="btn-ghost" id="btnPotVerfallen">Runde beenden, Pot verfaellt</button>
+      </div>
+      <div class="small" style="margin-top:6px;">
+        Beendet die Runde, auch wenn noch Antworten verdeckt sind.
+      </div>
+    </div>
+
     <h2 style="margin-top:20px;">Antworten — nur für dich sichtbar</h2>
     <div class="answers-board" id="answersBoard"></div>
   </div>
@@ -210,7 +235,16 @@ const defaultState = {
   buzzFlashAt: null,
   stealFlashAt: null,
   lastResult: null,
-  poolExhausted: false
+  poolExhausted: false,
+
+  // Rundenzaehler - dient nur der Anzeige.
+  // Alle Runden zaehlen gleich, kein Multiplikator.
+  round: 0,
+
+  // --- Steal: genau EIN Versuch fuer das gegnerische Team ---
+  stealTeam: null,      // welches Team stehlen darf
+  stealUsed: false,     // Versuch verbraucht
+  potOwner: null        // wem der Pot gehoert, wenn der Steal scheitert
 };
 let state = JSON.parse(JSON.stringify(defaultState));
 
@@ -223,13 +257,19 @@ async function saveState(){
   await sb.from('cd_state').update({ state }).eq('id',1);
 }
 loadState();
-setInterval(loadState, 2000);
-
-sb.channel('cd_state_channel_sl')
-  .on('postgres_changes', { event:'*', schema:'public', table:'cd_state' }, payload=>{
-    state = payload.new.state || state;
-    render();
-  }).subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'cd_state',
+    laden: async function(){ await loadState(); }
+  });
+} else {
+  setInterval(loadState, 2000);
+}
 
 function teamRoster(team){
   return Object.entries(state.players).filter(([n,p])=>p.team===team).map(([n])=>n);
@@ -292,6 +332,8 @@ function render(){
   const faceoffSection = document.getElementById('faceoffSection');
   const playingSection = document.getElementById('playingSection');
   const manualSection = document.getElementById('manualSection');
+  const fruehSection = document.getElementById('fruehSection');
+  const stealSection = document.getElementById('stealSection');
   const answersBoard = document.getElementById('answersBoard');
 
   potDisplay.textContent = state.currentFrage ? `Frage: ${state.currentFrage} — Pot: ${state.pot} Punkte` : '';
@@ -299,6 +341,17 @@ function render(){
   faceoffSection.style.display = state.phase==='faceoff' ? 'block' : 'none';
   playingSection.style.display = state.phase==='playing' ? 'block' : 'none';
   manualSection.style.display = state.phase==='manual' ? 'block' : 'none';
+  // Vorzeitiges Beenden ist immer moeglich, solange gespielt wird
+  fruehSection.style.display =
+    (state.phase==='playing' || state.phase==='faceoff') ? 'block' : 'none';
+
+  stealSection.style.display = state.phase==='steal' ? 'block' : 'none';
+  if(state.phase==='steal'){
+    const offen = state.answers.filter(a=>!a.revealed).length;
+    document.getElementById('stealInfo').textContent =
+      `Team ${state.stealTeam} darf EINE der ${offen} verdeckten Antworten nennen. ` +
+      `Es geht um ${state.pot} Punkte.`;
+  }
 
   if(!state.currentFrage){
     statusLine.textContent = state.poolExhausted
@@ -387,11 +440,19 @@ document.getElementById('btnNewQuestion').onclick = async ()=>{
   const idx = available[Math.floor(Math.random()*available.length)];
   state.questionIndex = idx;
   state.usedIndices.push(idx);
-  state.answers = QUESTIONS[idx].antworten.map(a=>({ text:a.text, punkte:a.punkte, revealed:false, team:null }));
-  state.currentFrage = QUESTIONS[idx].frage;
+
   state.round = (state.round || 0) + 1;
+
+  // Antworten nach Haeufigkeit sortiert - die haeufigste oben.
+  const sortiert = [...QUESTIONS[idx].antworten].sort((a,b) => b.punkte - a.punkte);
+  state.answers = sortiert
+    .map(a=>({ text:a.text, punkte:a.punkte, revealed:false, team:null }));
+  state.currentFrage = QUESTIONS[idx].frage;
   state.pot = 0;
   state.phase = 'buzz';
+  state.stealTeam = null;
+  state.stealUsed = false;
+  state.potOwner = null;
   state.buzzQueue = [];
   state.person1 = null;
   state.person2 = null;
@@ -439,6 +500,14 @@ document.getElementById('btnFaceoffMiss').onclick = async ()=>{
 async function revealAnswer(i){
   const a = state.answers[i];
   if(!a || a.revealed) return;
+
+  // In der Steal-Phase bedeutet ein Klick auf eine Antwort:
+  // das stehlende Team hat sie genannt und gewinnt den Pot.
+  if(state.phase === 'steal'){
+    await stealErfolg(i);
+    return;
+  }
+
   if(state.phase!=='playing' && state.phase!=='faceoff') return;
 
   a.revealed = true;
@@ -451,8 +520,9 @@ async function revealAnswer(i){
   state.pot += a.punkte;
 
   if(state.phase==='playing' && state.answers.every(x=>x.revealed)){
+    // Clean Sweep: alle Antworten ohne drei Strikes gefunden
     state['team'+state.controllingTeam].score += state.pot;
-    state.lastResult = `Team ${state.controllingTeam} löst alle Antworten und bekommt ${state.pot} Punkte!`;
+    state.lastResult = `Team ${state.controllingTeam} loest alle Antworten und bekommt ${state.pot} Punkte!`;
     state.phase = 'resolved';
   }
   await saveState();
@@ -461,17 +531,25 @@ async function revealAnswer(i){
 document.getElementById('btnStrike').onclick = async ()=>{
   if(state.phase!=='playing') return;
   state.controlLives -= 1;
+
   if(state.controlLives <= 0){
-    if(state.controlPasses < 3){
-      const newTeam = state.controllingTeam==='A' ? 'B' : 'A';
-      const newPasses = state.controlPasses + 1;
-      state.controllingTeam = newTeam;
-      state.controlLives = newPasses>=3 ? 1 : 3;
-      state.controlPasses = newPasses;
-      state.activePlayer = teamRoster(newTeam)[0] || null;
-      state.stealFlashAt = Date.now();
+    // Drei Strikes: das gegnerische Team bekommt GENAU EINEN
+    // Versuch, eine der verbleibenden Antworten zu nennen.
+    // Trifft es, bekommt es den ganzen Pot. Trifft es nicht,
+    // geht der Pot an das Team, das ihn erspielt hat.
+    const offen = state.answers.filter(a => !a.revealed).length;
+    if(offen === 0){
+      // Nichts mehr zu stehlen - Pot geht ans spielende Team
+      state['team'+state.controllingTeam].score += state.pot;
+      state.lastResult = `Team ${state.controllingTeam} bekommt ${state.pot} Punkte.`;
+      state.phase = 'resolved';
     } else {
-      state.phase = 'manual';
+      state.potOwner  = state.controllingTeam;
+      state.stealTeam = state.controllingTeam === 'A' ? 'B' : 'A';
+      state.stealUsed = false;
+      state.activePlayer = teamRoster(state.stealTeam)[0] || null;
+      state.stealFlashAt = Date.now();
+      state.phase = 'steal';
     }
   } else {
     advanceActivePlayer(state.controllingTeam);
@@ -479,8 +557,66 @@ document.getElementById('btnStrike').onclick = async ()=>{
   await saveState();
 };
 
+// --- Steal-Phase: ein einziger Versuch ---
+
+// Der Steal sitzt: das stehlende Team bekommt den kompletten Pot.
+async function stealErfolg(antwortIndex){
+  if(state.phase !== 'steal' || state.stealUsed) return;
+  state.stealUsed = true;
+
+  // Die genannte Antwort aufdecken - sichtbar machen, dass sie
+  // getroffen wurde. Der Pot bleibt wie er ist: das stehlende
+  // Team bekommt die Punkte der Runde, nicht mehr.
+  if(typeof antwortIndex === 'number'){
+    const a = state.answers[antwortIndex];
+    if(a && !a.revealed){
+      a.revealed = true;
+      a.team = state.stealTeam;
+    }
+  }
+
+  state['team'+state.stealTeam].score += state.pot;
+  state.lastResult = `Team ${state.stealTeam} STIEHLT ${state.pot} Punkte!`;
+  state.phase = 'resolved';
+  await saveState();
+}
+
+// Der Steal geht daneben: der Pot bleibt beim spielenden Team.
+document.getElementById('btnStealMiss').onclick = async ()=>{
+  if(state.phase !== 'steal' || state.stealUsed) return;
+  state.stealUsed = true;
+  const besitzer = state.potOwner;
+  state['team'+besitzer].score += state.pot;
+  state.lastResult = `Steal misslungen — Team ${besitzer} behaelt ${state.pot} Punkte.`;
+  state.phase = 'resolved';
+  await saveState();
+};
+
 document.getElementById('btnManualResolve').onclick = async ()=>{
   state.lastResult = 'Runde manuell beendet — niemand bekommt den Pot.';
+  state.phase = 'resolved';
+  await saveState();
+};
+
+// Runde vorzeitig beenden, Pot geht ans kontrollierende Team.
+// Vorher gab es das nur, wenn ALLE Antworten aufgedeckt waren -
+// eine Runde konnte also nie frueher sauber enden.
+document.getElementById('btnPotKassieren').onclick = async ()=>{
+  if(state.phase!=='playing' && state.phase!=='faceoff') return;
+  const team = state.controllingTeam;
+  if(!team) return;
+  const offen = state.answers.filter(x=>!x.revealed).length;
+  state['team'+team].score += state.pot;
+  state.lastResult = offen > 0
+    ? `Team ${team} beendet die Runde mit ${state.pot} Punkten (${offen} Antworten blieben verdeckt).`
+    : `Team ${team} bekommt ${state.pot} Punkte!`;
+  state.phase = 'resolved';
+  await saveState();
+};
+
+document.getElementById('btnPotVerfallen').onclick = async ()=>{
+  if(state.phase!=='playing' && state.phase!=='faceoff') return;
+  state.lastResult = 'Runde vorzeitig beendet — der Pot verfaellt.';
   state.phase = 'resolved';
   await saveState();
 };
