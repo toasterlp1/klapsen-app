@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="./morphs.js"></script>
 <style>
@@ -75,7 +76,7 @@
     <div class="queue" id="queue"><span style="color:var(--muted);">— niemand gebuzzert —</span></div>
     <div class="row" style="margin-top:14px;">
       <button class="btn-good" id="btnCorrect" disabled>Richtig (beide)</button>
-      <button class="btn-warn" id="btnHalf" disabled>Nur einer richtig</button>
+      <button class="btn-warn" id="btnHalf" disabled>Nur einer richtig (ab 2 Pkt)</button>
       <button class="btn-bad" id="btnWrong" disabled>Falsch</button>
     </div>
   </div>
@@ -115,6 +116,13 @@ sb.channel('mo_state_channel_sl')
     render();
   }).subscribe();
 
+// Die Punkte sinken mit der Zeit, also muss die Anzeige mitlaufen.
+// Sonst bliebe "Nur einer richtig" gesperrt, obwohl die Runde
+// laengst bei 2 Punkten angekommen ist.
+setInterval(() => {
+  if(state && state.morphIndex != null && state.revealStep < 2) render();
+}, 500);
+
 const MAX_PUNKTE = 5;
 const MIN_PUNKTE = 1;
 const PUNKTE_DAUER_MS = 20000;
@@ -139,7 +147,15 @@ function render(){
 
   if(eintrag){
     const stepTxt = state.revealStep === 0 ? 'nur Morph' : (state.revealStep === 1 ? 'Person A aufgedeckt' : 'komplett aufgelöst');
-    statusLine.innerHTML = `Morph <b>#${state.morphIndex+1}</b> — wert: <b>${currentPoints()} Punkte</b> — <b>${stepTxt}</b>`;
+    // Nach dem Aufdecken ist nur noch 1 Punkt zu holen - das muss
+    // hier stehen, sonst vergibst du im Glauben an die volle Kurve.
+    const p = currentPoints();
+    const wert = state.revealStep >= 1
+      ? '1 Punkt (nur noch eine Person offen)'
+      : (p > 2
+          ? `${p} Punkte — beide Personen noetig`
+          : `${p} Punkte — eine Person reicht (1 Pkt)`);
+    statusLine.innerHTML = `Morph <b>#${state.morphIndex+1}</b> — wert: <b>${wert}</b> — <b>${stepTxt}</b>`;
     answerReveal.innerHTML = 'Lösung: <b>' + (eintrag.nameA||'?') + '</b><span class="vs">+</span><b>' + (eintrag.nameB||'?') + '</b>';
   } else {
     statusLine.textContent = (state.usedIndices && state.usedIndices.length>=MORPHS.length)
@@ -163,7 +179,10 @@ function render(){
   const active = activeBuzzer();
   const hatMorph = state.morphIndex!=null;
   document.getElementById('btnCorrect').disabled = !active || solved || !hatMorph;
-  document.getElementById('btnHalf').disabled = !active || solved || !hatMorph;
+  // "Nur einer richtig" gibt es erst ab 2 Punkten. Darueber muss
+  // man beide Personen nennen, sonst zaehlt es als falsch.
+  const halbErlaubt = hatMorph && currentPoints() <= 2;
+  document.getElementById('btnHalf').disabled = !active || solved || !halbErlaubt;
   document.getElementById('btnWrong').disabled = !active || solved || !hatMorph;
   document.getElementById('btnRevealA').disabled = !hatMorph || state.revealStep >= 1;
   document.getElementById('btnRevealB').disabled = !hatMorph || state.revealStep >= 2;
@@ -245,17 +264,30 @@ document.getElementById('btnRevealB').onclick = async ()=>{
 document.getElementById('btnCorrect').onclick = async ()=>{
   const active = activeBuzzer();
   if(!active) return;
-  state.players[active] = (state.players[active]||0) + currentPoints();
+
+  // Wurde Person A schon aufgedeckt, bleibt nur noch eine uebrig.
+  // Dafuer gibt es genau 1 Punkt - der Rest der Runde ist verschenkt,
+  // weil das Raetsel durch das Aufdecken deutlich leichter wurde.
+  const nurNochEine = state.revealStep >= 1;
+  const punkte = nurNochEine ? 1 : currentPoints();
+
+  state.players[active] = (state.players[active]||0) + punkte;
   state.revealStep = 2;
   await saveState();
 };
 
-// Nur einer der beiden Namen richtig -> halbe Punkte (aufgerundet), Person A zeigen, weiter ratbar
+// Nur EINE Person genannt.
+// Bis 3 Punkte gilt das als falsch - man muss beide nennen.
+// Erst ab 2 Punkten (LAST CHANCE) reicht eine Person, dann 1 Punkt.
 document.getElementById('btnHalf').onclick = async ()=>{
   const active = activeBuzzer();
   if(!active) return;
-  const halbe = Math.ceil(currentPoints() / 2);
-  state.players[active] = (state.players[active]||0) + halbe;
+  if(currentPoints() > 2){
+    alert('Ueber 2 Punkten muessen beide Personen genannt werden.\n' +
+          'Nutze "Falsch", wenn nur eine stimmt.');
+    return;
+  }
+  state.players[active] = (state.players[active]||0) + 1;
   // dieser Spieler ist raus für den Rest der Runde, einer bleibt offen
   state.buzzedOut.push(active);
   if(state.revealStep < 1) state.revealStep = 1; // eine Person aufdecken
