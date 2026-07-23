@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../live.js"></script>
 <script src="../auth.js"></script>
 <script src="./morphs.js"></script>
 <script src="../avatare.js"></script>
@@ -152,7 +153,19 @@
   .reveal-split.show{opacity:1;}
   .reveal-half{position:relative;flex:1;overflow:hidden;background:#05070d;}
   .reveal-half img{width:100%;height:100%;object-fit:cover;}
-  .reveal-half.hidden-half{filter:brightness(.15) blur(6px);}
+  /* Die noch nicht aufgedeckte Haelfte wird KOMPLETT verdeckt.
+     Vorher war sie nur weichgezeichnet - Frisur, Hautton und
+     Kleidung blieben erkennbar, damit war die zweite Person
+     faktisch schon verraten. */
+  .reveal-half.hidden-half img{visibility:hidden;}
+  .reveal-half.hidden-half{
+    background:linear-gradient(160deg,#141b30,#0a0e1a);
+  }
+  .reveal-half.hidden-half::after{
+    content:'';position:absolute;inset:0;
+    background:repeating-linear-gradient(
+      45deg, rgba(255,255,255,.03) 0 12px, transparent 12px 24px);
+  }
   .reveal-half .tag{
     position:absolute;left:0;right:0;bottom:0;padding:14px 10px;
     background:linear-gradient(0deg,rgba(5,7,13,.92),transparent);
@@ -249,7 +262,7 @@
     </div>
   </div>
 
-  <div class="only-one" id="onlyOne">ONLY 1</div>
+  <div class="only-one" id="onlyOne">LAST CHANCE</div>
 
   <div class="frame-outer">
     <div class="frame-wrap" id="frameWrap">
@@ -409,8 +422,6 @@ function render(){
                + `<span class="idx">${i+1}</span><span>${n}</span></div>`;
         }).join('')
       : '<span class="leer">—</span>';
-    const onlyOneEl = document.getElementById('onlyOne');
-    if(onlyOneEl) onlyOneEl.classList.toggle('show', offen.length === 1 && !solved);
   }
 }
 
@@ -434,8 +445,16 @@ function tick(){
       fill.style.width = (punkteAnteil(elapsed) * 100) + '%';
       barLbl.textContent = wartetAufBuzzer ? 'BUZZER — ZEIT ANGEHALTEN' : `${pts} PUNKTE`;
     }
+
+    // ONLY 1 warnt, dass die Runde nur noch wenig wert ist.
+    // Erscheint ab 2 Punkten - vorher haing es faelschlich an
+    // der Zahl der verbliebenen Buzzer.
+    const onlyOneEl = document.getElementById('onlyOne');
+    if(onlyOneEl) onlyOneEl.classList.toggle('show', pts <= 2);
   } else if(bar){
     bar.style.display = 'none';
+    const onlyOneEl = document.getElementById('onlyOne');
+    if(onlyOneEl) onlyOneEl.classList.remove('show');
   }
   requestAnimationFrame(tick);
 }
@@ -447,13 +466,19 @@ async function loadState(){
   render();
 }
 loadState();
-setInterval(loadState, 2000);
-
-sb.channel('mo_state_channel')
-  .on('postgres_changes', { event:'*', schema:'public', table:'mo_state' }, payload=>{
-    state = payload.new.state || {};
-    render();
-  }).subscribe();
+// Realtime mit Selbstheilung: bricht die Verbindung ab (Handy sperrt,
+// WLAN wechselt), wird neu verbunden und der verpasste Stand geholt.
+// Solange Realtime steht, laeuft nur ein sehr langsames Sicherheitsnetz
+// statt des frueheren Dauer-Pollings im Sekundentakt.
+if(window.KA_LIVE){
+  KA_LIVE.start({
+    client: sb,
+    tabelle: 'mo_state',
+    laden: async function(){ await loadState(); }
+  });
+} else {
+  setInterval(loadState, 2000);
+}
 </script>
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
