@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="../symbole.js"></script>
@@ -344,9 +345,17 @@ async function abgeben(inhalt, art){
     autor: myName, art, inhalt
   });
 
-  s.fertig = s.fertig || [];
-  if(!s.fertig.includes(myName)) s.fertig.push(myName);
-  await speichere(s);
+  // Das Eintragen in die fertig-Liste macht die Datenbank, damit
+  // gleichzeitige Abgaben sich nicht gegenseitig ueberschreiben.
+  const { data, error } = await sb.rpc('gp_fertig_melden', { p_name: myName });
+  if(error){
+    console.warn('gp_fertig_melden nicht verfuegbar, nutze Rueckfall:', error.message);
+    s.fertig = s.fertig || [];
+    if(!s.fertig.includes(myName)) s.fertig.push(myName);
+    await speichere(s);
+  } else if(data){
+    state = data;
+  }
   render();
 }
 
