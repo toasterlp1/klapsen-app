@@ -10,6 +10,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
+<script src="../runden.js"></script>
 <style>
   :root{
     --bg:#0a0f1e; --panel:#111a30; --panel-border:#1e2a4a;
@@ -143,6 +144,9 @@ $('btnEnde').addEventListener('click', async () => {
   if(typeof speichereErgebnisse === 'function') await speichereErgebnisse('bluff-quiz', liste);
 
   await sb.from('bluff_runden').update({ phase:'ende' }).eq('id', rundeId);
+  window.bqZaehler.gespielt = (window.bqZaehler.gespielt || 0) + 1;
+  localStorage.setItem('bq_gespielt', String(window.bqZaehler.gespielt));
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
   phase = 'ende';
   aktualisiere();
 
@@ -225,6 +229,28 @@ if(!sb) alert('Nicht eingeloggt. Seite neu laden.');
 
 <script src="../zurueck.js"></script>
 <script src="../hintergrund.js"></script>
+<script>
+// Rundenzaehler: Bluff-Quiz legt jede Runde als eigene Zeile an,
+// deshalb zaehlen wir hier lokal mit.
+window.bqZaehler = {
+  gespielt: parseInt(localStorage.getItem('bq_gespielt')||'0',10),
+  rundenZiel: parseInt(localStorage.getItem('bq_ziel')||'10',10),
+  rundenFertig: false
+};
+
+RUNDEN.init({
+  key: 'bq',
+  state: function(){ return window.bqZaehler; },
+  speichern: async function(s){
+    window.bqZaehler = s;
+    localStorage.setItem('bq_gespielt', String(s.gespielt||0));
+    localStorage.setItem('bq_ziel', String(s.rundenZiel||10));
+  },
+  zaehler: function(s){ return s.gespielt || 0; },
+  reset: function(s){ s.gespielt = 0; },
+  standard: 10
+});
+</script>
 <script src="../sound-toggle.js"></script>
 </body>
 </html>
