@@ -209,9 +209,37 @@
     setTimeout(function () { location.href = ziel; }, 400);
   }
 
+  // Jedes Format speichert den Spielernamen unter einem eigenen
+  // localStorage-Key. Damit niemand nach dem Mitziehen den Namen erneut
+  // waehlen muss, kopieren wir den in der Lobby gewaehlten Namen
+  // (ka_lobby_name) beim Oeffnen einer Format-Seite in den passenden Key.
+  var NAME_KEYS = {
+    ausreden:'ak_name', 'bluff-quiz':'bl_name', chatduell:'cd_name',
+    emoji:'er_name', hotzone:'hz_name', millionaer:'wwm_name',
+    morph:'mo_name', weristdas:'wid_name'
+  };
+
+  function uebernehmeLobbyName() {
+    try {
+      var lobbyName = localStorage.getItem('ka_lobby_name');
+      if (!lobbyName) return;
+      var format = meinFormat();
+      var key = NAME_KEYS[format];
+      if (!key) return;
+      // Nur setzen, wenn noch keiner gewaehlt wurde - ueberschreibt keine
+      // bewusste manuelle Auswahl.
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, lobbyName);
+      }
+    } catch (e) {}
+  }
+
   function starte(client) {
     sb = client || window.KA_SB;
     if (!sb) return;
+
+    // Lobby-Namen ins Format uebernehmen (falls starte spaeter kommt)
+    uebernehmeLobbyName();
 
     // Wer selbst ein Format oeffnet, klinkt sich wieder ins Turnier ein.
     // (Die Steuerungsseite ruft danach klinkeAus() erneut auf und bleibt frei.)
@@ -259,7 +287,13 @@
     klinkeEin: klinkeEin,
     istFrei: istFrei,
     loescheRolle: loescheRolle,
+    uebernehmeLobbyName: uebernehmeLobbyName,
     NAMEN: NAMEN,
     WEGE: WEGE
   };
+
+  // Sofort beim Laden ausfuehren: der Lobby-Name muss im Format-Key stehen,
+  // BEVOR das Inline-Script der Buzzer-Seite ihn ausliest. turnier.js wird
+  // im <head> vor diesem Inline-Script eingebunden, also passt das Timing.
+  uebernehmeLobbyName();
 })();
