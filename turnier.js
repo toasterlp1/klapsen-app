@@ -67,14 +67,32 @@
     return 'buzzer'; // im Zweifel Zuschauer/Buzzer, nie ausversehen Host
   }
 
-  function setzeRolle(r) {
-    try { localStorage.setItem('ka_rolle', r); } catch (e) {}
+  // setzeRolle(r)        -> normaler Seiten-Default (host.html sagt 'host' usw.)
+  // setzeRolle(r, true)  -> feste Lobby-Rolle, die NICHT von Seiten-Defaults
+  //                         ueberschrieben werden darf.
+  // Ein Spieler, der bei Higher or Lower / Imposter / Black Stories auf der
+  // host.html landet, wuerde sonst als 'host' getarnt und beim naechsten
+  // Format faelschlich auf die echte Host-Ansicht gezogen.
+  function setzeRolle(r, fest) {
+    try {
+      if (fest) {
+        localStorage.setItem('ka_rolle', r);
+        localStorage.setItem('ka_rolle_fest', '1');
+        return;
+      }
+      // Kein Ueberschreiben, wenn die Lobby die Rolle fest vergeben hat
+      if (localStorage.getItem('ka_rolle_fest') === '1') return;
+      localStorage.setItem('ka_rolle', r);
+    } catch (e) {}
   }
 
   /* ---------- Ausklinken / Wiedereinklinken (Home-Button) ---------- */
 
-  function istFrei() {
-    try { return sessionStorage.getItem(FREI_KEY) === '1'; } catch (e) { return false; }
+  function loescheRolle() {
+    try {
+      localStorage.removeItem('ka_rolle');
+      localStorage.removeItem('ka_rolle_fest');
+    } catch (e) {}
   }
   function klinkeAus() {
     try { sessionStorage.setItem(FREI_KEY, '1'); } catch (e) {}
@@ -211,6 +229,7 @@
     klinkeAus: klinkeAus,
     klinkeEin: klinkeEin,
     istFrei: istFrei,
+    loescheRolle: loescheRolle,
     NAMEN: NAMEN,
     WEGE: WEGE
   };
