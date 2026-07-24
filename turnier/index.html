@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8" />
-<title>Turnier — Klapsen App</title>
+<title>Lobby — Klapsen App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
@@ -27,6 +27,37 @@
          padding:20px;margin-bottom:18px;}
   .karte h2{font-size:14px;letter-spacing:2px;text-transform:uppercase;
             color:var(--muted);margin:0 0 14px;}
+
+  /* Namensauswahl */
+  .namen{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;}
+  .nm-karte{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;
+            border-radius:14px;background:#0d1220;border:1px solid var(--rand);cursor:pointer;
+            transition:border-color .15s, transform .1s;}
+  .nm-karte:hover{border-color:var(--akzent);}
+  .nm-karte:active{transform:scale(.96);}
+  .nm-karte.weg{opacity:.35;pointer-events:none;}
+  .nm-karte img{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#1a2138;}
+  .nm-karte .kein{width:64px;height:64px;border-radius:50%;background:#1a2138;
+                  display:flex;align-items:center;justify-content:center;
+                  font-family:Anton,sans-serif;font-size:26px;color:var(--muted);}
+  .nm-karte .txt{font-weight:700;font-size:14px;}
+  .nm-karte .du{font-size:11px;color:var(--gold);letter-spacing:1px;}
+
+  /* Wartebereich */
+  .teilnehmer{display:flex;flex-wrap:wrap;gap:14px;}
+  .tn{display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;}
+  .tn img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1a2138;
+          border:2px solid var(--gut);}
+  .tn .kein{width:56px;height:56px;border-radius:50%;background:#1a2138;border:2px solid var(--gut);
+            display:flex;align-items:center;justify-content:center;font-family:Anton,sans-serif;
+            font-size:22px;color:var(--muted);}
+  .tn.host img,.tn.host .kein{border-color:var(--gold);}
+  .tn .txt{font-size:12px;font-weight:700;text-align:center;word-break:break-word;}
+  .tn .rolle{font-size:10px;color:var(--muted);letter-spacing:1px;}
+  .tn.host .rolle{color:var(--gold);}
+  .leer{color:var(--muted);font-size:14px;}
+
+  /* Planung */
   .formate{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
   .fmt{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;
        background:#0d1220;border:1px solid var(--rand);cursor:pointer;
@@ -46,6 +77,8 @@
   .b-weiter{background:var(--gold);color:#241900;}
   .b-ghost{background:#1b2138;color:var(--ink);border:1px solid var(--rand);}
   .b-stop{background:var(--bad);color:#fff;}
+  .b-verlassen{background:transparent;color:var(--muted);border:1px solid var(--rand);}
+
   .lauf{display:flex;flex-direction:column;gap:8px;}
   .schritt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:11px;
            background:#0d1220;border:1px solid var(--rand);}
@@ -55,52 +88,72 @@
   .schritt.jetzt .pos{color:var(--gold);}
   .schritt .nm{flex:1;font-weight:700;}
   .schritt .rd{font-size:12px;color:var(--muted);}
-  .stand{display:flex;flex-direction:column;gap:6px;}
-  .zeile{display:flex;justify-content:space-between;padding:10px 14px;border-radius:9px;
-         background:#0d1220;border:1px solid var(--rand);font-size:14px;}
-  .zeile .p{color:var(--gut);font-weight:800;}
-  .zeile.erster{border-color:var(--gold);}
   .hinweis{font-size:13px;color:var(--muted);line-height:1.6;margin-top:10px;}
+  .warte-msg{text-align:center;padding:30px 10px;color:var(--muted);font-size:15px;line-height:1.7;}
+  .warte-msg .gross{font-family:Anton,sans-serif;font-size:22px;color:var(--ink);
+                    letter-spacing:2px;display:block;margin-bottom:8px;}
   @media (max-width:820px){
     body{padding:14px;}
     .formate{grid-template-columns:1fr 1fr;}
-    button{width:100%;}
+    .namen{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
   }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
 </head>
 <body>
 <div class="wrap">
-  <h1>TURNIER</h1>
-  <div class="sub">Formate zusammenstellen, alle Geräte ziehen automatisch mit</div>
+  <h1>LOBBY</h1>
+  <div class="sub" id="sub">Wähle deinen Namen, um beizutreten</div>
 
-  <div class="karte" id="aufbauKarte">
+  <!-- 1. Namensauswahl -->
+  <div class="karte" id="wahlKarte">
+    <h2>Wer bist du?</h2>
+    <div class="namen" id="namenListe"></div>
+  </div>
+
+  <!-- 2. Wartebereich (alle sehen das) -->
+  <div class="karte" id="warteKarte" style="display:none;">
+    <h2>In der Lobby</h2>
+    <div class="teilnehmer" id="teilnehmerListe"></div>
+    <div class="reihe" style="margin-top:16px;">
+      <button class="b-verlassen" id="btnVerlassen">Lobby verlassen</button>
+    </div>
+  </div>
+
+  <!-- Wartemeldung für Spieler (nicht Host) -->
+  <div class="karte" id="spielerWarte" style="display:none;">
+    <div class="warte-msg">
+      <span class="gross">WARTEN AUF START</span>
+      töster stellt gerade das Turnier zusammen.<br>
+      Sobald es losgeht, wirst du automatisch ins Spiel gezogen.
+    </div>
+  </div>
+
+  <!-- 3. Planung (NUR töster) -->
+  <div class="karte" id="planKarte" style="display:none;">
     <h2>Formate auswählen</h2>
     <div class="formate" id="formatListe"></div>
     <div class="reihe" style="margin-top:16px;">
-      <button class="b-start" id="btnStart" disabled>Turnier starten</button>
+      <button class="b-start" id="btnStart" disabled>Lobby starten</button>
       <button class="b-ghost" id="btnLeeren">Auswahl leeren</button>
     </div>
     <div class="hinweis">
       Reihenfolge = Klickreihenfolge. Die Zahl daneben legt fest, wie viele
-      Runden gespielt werden — sie wird beim Start an das Format übergeben.
+      Runden gespielt werden. Beim Start wird das 1. Format geöffnet und alle
+      Spieler werden mitgezogen.
     </div>
   </div>
 
+  <!-- 4. Laufendes Turnier (NUR töster) -->
   <div class="karte" id="laufKarte" style="display:none;">
     <h2>Ablauf</h2>
     <div class="lauf" id="laufListe"></div>
     <div class="reihe" style="margin-top:16px;">
       <button class="b-weiter" id="btnWeiter">Zum nächsten Format</button>
-      <button class="b-ghost" id="btnJetzt">Aktuelles Format öffnen</button>
+      <button class="b-ghost" id="btnHost">Auf Host-Ansicht wechseln</button>
       <button class="b-stop" id="btnEnde">Turnier beenden</button>
     </div>
     <div class="hinweis" id="laufHinweis"></div>
-  </div>
-
-  <div class="karte" id="standKarte" style="display:none;">
-    <h2>Gesamtstand</h2>
-    <div class="stand" id="standListe"></div>
   </div>
 </div>
 
@@ -109,16 +162,129 @@ const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
 const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let auswahl = [];        // [{ key, runden }]
-let turnier = null;
+const HOST_NAME = "töster";           // fest: das bin ich
+let meinName = null;                  // wer ich in dieser Lobby bin
+let binHost = false;
+let auswahl = [];                     // [{ key, runden }]
+let turnier = null;                   // aktueller Zustand
 
-function formatKeys(){
-  return Object.keys(TURNIER.NAMEN);
+/* ---------- Namensauswahl ---------- */
+function namenAusAvatare(){
+  return (typeof AVATARE === 'object') ? Object.keys(AVATARE) : [];
 }
 
+function zeichneNamen(belegt){
+  belegt = belegt || [];
+  const box = document.getElementById('namenListe');
+  box.innerHTML = namenAusAvatare().map(function(n){
+    const url = (typeof avatarFor === 'function') ? avatarFor(n) : null;
+    const bild = url
+      ? '<img src="' + url + '" alt="">'
+      : '<div class="kein">' + n.charAt(0).toUpperCase() + '</div>';
+    const weg = belegt.indexOf(n) >= 0 ? ' weg' : '';
+    const du = n === HOST_NAME ? '<span class="du">HOST</span>' : '';
+    return '<div class="nm-karte' + weg + '" data-n="' + n + '">' +
+           bild + '<span class="txt">' + n + '</span>' + du + '</div>';
+  }).join('');
+
+  box.querySelectorAll('.nm-karte').forEach(function(el){
+    el.onclick = function(){ beitreten(el.dataset.n); };
+  });
+}
+
+/* ---------- Beitreten / Verlassen ---------- */
+async function beitreten(name){
+  meinName = name;
+  binHost = (name === HOST_NAME);
+  try { localStorage.setItem('ka_lobby_name', name); } catch(e){}
+
+  // Rolle fuer das Mitziehen FEST festlegen: Host = host, alle anderen = buzzer.
+  // 'fest' verhindert, dass higherlower/imposter/blackstories host.html
+  // einen Spieler faelschlich zum Host macht.
+  TURNIER.setzeRolle(binHost ? 'host' : 'buzzer', true);
+  // In der Lobby wird man NICHT gezogen (erst beim Start / auf den Format-Seiten)
+  TURNIER.klinkeAus();
+
+  await sb.from('turnier_lobby')
+    .upsert({ name: name, ist_host: binHost, gejoint_at: new Date().toISOString(),
+              gesehen_at: new Date().toISOString() }, { onConflict: 'name' });
+
+  document.getElementById('wahlKarte').style.display = 'none';
+  document.getElementById('warteKarte').style.display = '';
+  document.getElementById('sub').textContent = binHost
+    ? 'Du bist der Host. Stell das Turnier zusammen und starte, wenn alle da sind.'
+    : 'Du bist in der Lobby. Warte, bis töster startet.';
+
+  await ladeLobby();
+  await ladeZustand();
+  zeichneAnsicht();
+  starteHeartbeat();
+
+  // Laeuft schon ein Turnier? Dann Spieler sofort ins Format ziehen.
+  if(turnier) ziehePlayerVielleicht(turnier);
+
+  // Sicherheitsnetz: falls ein Spieler das Realtime-Event verpasst,
+  // holt dieser Poll die Schaltung nach - alle 2.5s.
+  if(!binHost){
+    setInterval(async function(){
+      const s = await TURNIER.lade();
+      if(s){ turnier = s; ziehePlayerVielleicht(s); }
+    }, 2500);
+  }
+}
+
+document.getElementById('btnVerlassen').onclick = async function(){
+  if(meinName){
+    await sb.from('turnier_lobby').delete().eq('name', meinName);
+  }
+  try { localStorage.removeItem('ka_lobby_name'); } catch(e){}
+  TURNIER.loescheRolle();   // feste Rolle aufheben
+  meinName = null; binHost = false;
+  location.reload();
+};
+
+/* ---------- Heartbeat: zeigt, dass ich noch da bin ---------- */
+let hbTimer = null;
+function starteHeartbeat(){
+  if(hbTimer) clearInterval(hbTimer);
+  hbTimer = setInterval(async function(){
+    if(!meinName) return;
+    await sb.from('turnier_lobby')
+      .update({ gesehen_at: new Date().toISOString() }).eq('name', meinName);
+  }, 20000);
+}
+
+/* ---------- Teilnehmerliste ---------- */
+async function ladeLobby(){
+  const r = await sb.from('turnier_lobby').select('name, ist_host, gesehen_at')
+    .order('gejoint_at', { ascending:true });
+  if(r.error || !r.data){ return; }
+  zeichneTeilnehmer(r.data);
+}
+
+function zeichneTeilnehmer(liste){
+  const box = document.getElementById('teilnehmerListe');
+  if(!liste.length){
+    box.innerHTML = '<div class="leer">Noch niemand da.</div>';
+    return;
+  }
+  box.innerHTML = liste.map(function(t){
+    const url = (typeof avatarFor === 'function') ? avatarFor(t.name) : null;
+    const bild = url
+      ? '<img src="' + url + '" alt="">'
+      : '<div class="kein">' + t.name.charAt(0).toUpperCase() + '</div>';
+    return '<div class="tn ' + (t.ist_host?'host':'') + '">' +
+           bild +
+           '<span class="txt">' + t.name + '</span>' +
+           '<span class="rolle">' + (t.ist_host ? 'HOST' : 'SPIELER') + '</span>' +
+           '</div>';
+  }).join('');
+}
+
+/* ---------- Planung (nur Host) ---------- */
 function zeichneAuswahl(){
   const box = document.getElementById('formatListe');
-  box.innerHTML = formatKeys().map(function(k){
+  box.innerHTML = Object.keys(TURNIER.NAMEN).map(function(k){
     const i = auswahl.findIndex(function(a){ return a.key === k; });
     const an = i >= 0;
     const rd = an ? auswahl[i].runden : 10;
@@ -161,21 +327,23 @@ document.getElementById('btnStart').onclick = async function(){
   if(!auswahl.length) return;
   const s = {
     laeuft: true,
+    phase: 'spiel',
     schritte: auswahl.slice(),
     index: 0,
     aktiv: auswahl[0].key,
-    gen: 1,                 // erste Schaltung -> alle Geraete ziehen
+    gen: 1,                 // erste Schaltung -> alle Spieler ziehen
     gestartet: Date.now()
   };
   await TURNIER.speichere(s);
   turnier = s;
-  TURNIER.setzeGen(1);      // ich (Steuerung) bin schon auf dem Stand, ziehe mich nicht selbst mit
+  TURNIER.setzeGen(1);      // ich selbst bin auf dem Stand
   await setzeRundenZiel(auswahl[0]);
-  zeichneLauf();
+  // Host geht selbst auf die Host-Ansicht des 1. Formats
+  const ziel = TURNIER.zielWeg(auswahl[0].key, 'host');
+  if(ziel){ location.href = ziel; }
 };
 
-// Die Rundenzahl in den State des jeweiligen Formats schreiben,
-// damit der Spielleiter sie schon eingestellt vorfindet.
+// Rundenzahl in den State des Formats schreiben
 async function setzeRundenZiel(schritt){
   const TAB = { morph:'mo_state', weristdas:'wid_state', emoji:'er_state',
                 imposter:'imp_state', chatduell:'cd_state', hotzone:'hz_state',
@@ -191,53 +359,79 @@ async function setzeRundenZiel(schritt){
   await sb.from(t).update({ state: st }).eq('id',1);
 }
 
+/* ---------- Laufendes Turnier (nur Host) ---------- */
 document.getElementById('btnWeiter').onclick = async function(){
   if(!turnier || !turnier.laeuft) return;
   const naechster = turnier.index + 1;
   if(naechster >= turnier.schritte.length){
     if(!confirm('Das war das letzte Format. Turnier beenden?')) return;
     turnier.laeuft = false;
+    turnier.phase = 'lobby';
     turnier.aktiv = null;
+    turnier.gen = (parseInt(turnier.gen||0,10)||0) + 1;
     await TURNIER.speichere(turnier);
-    zeichneLauf();
+    TURNIER.setzeGen(turnier.gen);
+    zeichneAnsicht();
     return;
   }
   turnier.index = naechster;
   turnier.aktiv = turnier.schritte[naechster].key;
-  turnier.gen = (parseInt(turnier.gen || 0, 10) || 0) + 1;  // hochzaehlen -> alle ziehen
+  turnier.gen = (parseInt(turnier.gen||0,10)||0) + 1;   // hochzaehlen -> alle ziehen
   await TURNIER.speichere(turnier);
-  TURNIER.setzeGen(turnier.gen);   // Steuerung bleibt, wo sie ist
+  TURNIER.setzeGen(turnier.gen);
   await setzeRundenZiel(turnier.schritte[naechster]);
-  zeichneLauf();
+  // Host selbst auf die neue Host-Ansicht
+  const ziel = TURNIER.zielWeg(turnier.aktiv, 'host');
+  if(ziel){ location.href = ziel; }
 };
 
-document.getElementById('btnJetzt').onclick = function(){
+document.getElementById('btnHost').onclick = function(){
   if(!turnier || !turnier.aktiv) return;
-  const ziel = TURNIER.zielWeg(turnier.aktiv, 'sl');
+  const ziel = TURNIER.zielWeg(turnier.aktiv, 'host');
   if(ziel) location.href = ziel;
 };
 
 document.getElementById('btnEnde').onclick = async function(){
-  if(!confirm('Turnier wirklich beenden?')) return;
-  await TURNIER.speichere({ laeuft:false, schritte:[], index:0, aktiv:null });
+  if(!confirm('Turnier wirklich beenden? Die Lobby bleibt bestehen.')) return;
+  const g = (parseInt((turnier&&turnier.gen)||0,10)||0) + 1;
+  await TURNIER.speichere({ laeuft:false, phase:'lobby', schritte:[], index:0, aktiv:null, gen:g });
+  TURNIER.setzeGen(g);
   turnier = null;
-  document.getElementById('laufKarte').style.display = 'none';
-  document.getElementById('aufbauKarte').style.display = '';
   auswahl = [];
-  zeichneAuswahl();
+  zeichneAnsicht();
 };
 
-function zeichneLauf(){
-  const auf = document.getElementById('aufbauKarte');
-  const lauf = document.getElementById('laufKarte');
-  if(!turnier || !turnier.laeuft){
-    auf.style.display = '';
-    lauf.style.display = 'none';
-    return;
-  }
-  auf.style.display = 'none';
-  lauf.style.display = '';
+/* ---------- Spieler von der Lobby ins Format ziehen ---------- */
+// Der Host navigiert sich selbst (per Start-/Weiter-Button). Ein SPIELER
+// dagegen sitzt in der Lobby und muss von hier automatisch ins aktive
+// Format gezogen werden - genau wie bei einem spaeteren Formatwechsel,
+// wenn er zwischendurch wieder in der Lobby gelandet ist.
+let letzteZugGen = 0;
+function ziehePlayerVielleicht(s){
+  if(binHost) return;                    // Host zieht sich nie selbst
+  if(!s || !s.laeuft || !s.aktiv) return;
+  if(s.phase && s.phase === 'lobby') return;
+  const dbGen = parseInt(s.gen || 0, 10) || 0;
+  if(dbGen <= letzteZugGen) return;      // diese Schaltung schon umgesetzt
+  letzteZugGen = dbGen;
 
+  // Beim Ziehen ist der Spieler NICHT mehr frei - er folgt dem Turnier.
+  TURNIER.klinkeEin();
+  TURNIER.setzeGen(dbGen);               // Format-Seite springt nicht nochmal
+  const ziel = TURNIER.zielWeg(s.aktiv, 'buzzer');  // Spieler = buzzer-Route
+  if(ziel){ setTimeout(function(){ location.href = ziel; }, 400); }
+}
+async function ladeZustand(){
+  const s = await TURNIER.lade();
+  if(s){
+    turnier = s;
+    if(s.schritte && s.schritte.length) auswahl = s.schritte;
+    TURNIER.setzeGen(parseInt(s.gen || 0, 10) || 0);  // kein Selbst-Sprung
+  }
+}
+
+function zeichneLauf(){
+  if(!turnier || !turnier.laeuft) return;
   document.getElementById('laufListe').innerHTML = turnier.schritte.map(function(s,i){
     const cls = i === turnier.index ? 'jetzt' : (i < turnier.index ? 'fertig' : '');
     return '<div class="schritt ' + cls + '">' +
@@ -245,52 +439,59 @@ function zeichneLauf(){
            '<span class="nm">' + TURNIER.NAMEN[s.key] + '</span>' +
            '<span class="rd">' + s.runden + ' Runden</span></div>';
   }).join('');
-
   const jetzt = turnier.schritte[turnier.index];
   document.getElementById('laufHinweis').textContent = jetzt
     ? 'Läuft: ' + TURNIER.NAMEN[jetzt.key] + ' · ' + jetzt.runden + ' Runden. ' +
-      'Beim Weiterschalten springen alle Geräte automatisch mit.'
+      'Beim Weiterschalten springen alle Spieler automatisch mit.'
     : 'Turnier beendet.';
 }
 
-async function ladeStand(){
-  const r = await sb.from('ergebnisse')
-    .select('spieler, punkte, platz, format')
-    .gte('erstellt', new Date(Date.now() - 12*3600*1000).toISOString());
-  if(r.error || !r.data) return;
+// Zeigt je nach Rolle & Phase die richtigen Karten
+function zeichneAnsicht(){
+  const laeuft = !!(turnier && turnier.laeuft);
 
-  const crew = (typeof AVATARE === 'object') ? Object.keys(AVATARE) : [];
-  const summe = {};
-  r.data.forEach(function(e){
-    if(crew.length && crew.indexOf(e.spieler) < 0) return;
-    summe[e.spieler] = (summe[e.spieler] || 0) + (e.punkte || 0);
-  });
+  document.getElementById('planKarte').style.display   = (binHost && !laeuft) ? '' : 'none';
+  document.getElementById('laufKarte').style.display   = (binHost && laeuft)  ? '' : 'none';
+  document.getElementById('spielerWarte').style.display= (!binHost)           ? '' : 'none';
 
-  const liste = Object.keys(summe).map(function(n){ return { n:n, p:summe[n] }; })
-                      .sort(function(a,b){ return b.p - a.p; });
-  const karte = document.getElementById('standKarte');
-  if(!liste.length){ karte.style.display = 'none'; return; }
-  karte.style.display = '';
-  document.getElementById('standListe').innerHTML = liste.map(function(x,i){
-    return '<div class="zeile ' + (i===0?'erster':'') + '">' +
-           '<span>' + (i+1) + '. ' + x.n + '</span>' +
-           '<span class="p">' + x.p + '</span></div>';
-  }).join('');
+  if(binHost && !laeuft) zeichneAuswahl();
+  if(binHost && laeuft)  zeichneLauf();
 }
 
-(async function(){
-  TURNIER.setzeRolle('sl');   // wer diese Seite oeffnet, ist Spielleiter
-  TURNIER.klinkeAus();        // die Steuerung wird NIE selbst mitgezogen
-  zeichneAuswahl();
-  const s = await TURNIER.lade();
-  if(s && s.laeuft){
-    turnier = s;
-    auswahl = s.schritte || [];
-    TURNIER.setzeGen(parseInt(s.gen || 0, 10) || 0); // auf aktuellen Stand, kein Selbst-Sprung
+/* ---------- Realtime: Lobby + Zustand ---------- */
+function abonniere(){
+  sb.channel('lobby_' + Math.random().toString(36).slice(2,8))
+    .on('postgres_changes', { event:'*', schema:'public', table:'turnier_lobby' },
+        function(){ ladeLobby(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'turnier_state' },
+        function(payload){
+          const s = payload && payload.new ? payload.new.state : null;
+          if(s){ turnier = s; zeichneAnsicht(); ziehePlayerVielleicht(s); }
+        })
+    .subscribe();
+}
+
+/* ---------- Beim Verlassen der Seite austragen ---------- */
+window.addEventListener('pagehide', function(){
+  if(meinName && navigator.sendBeacon){
+    // Best effort - RLS erlaubt delete; sendBeacon kann kein DELETE mit Body,
+    // daher nur der Heartbeat entscheidet ueber Karteileichen.
   }
-  zeichneLauf();
-  ladeStand();
-  setInterval(ladeStand, 15000);
+});
+
+/* ---------- Start ---------- */
+(async function(){
+  // turnier.js NICHT starten - die Lobby zieht sich selbst nicht,
+  // sie steuert. Das Mitziehen passiert auf den Format-Seiten.
+  zeichneNamen([]);
+
+  // War ich schon mal drin? (localStorage) -> direkt zuruecksetzen auf Wahl,
+  // damit man bewusst neu joint. Wir zeigen aber die belegten Namen an.
+  const r = await sb.from('turnier_lobby').select('name');
+  const belegt = (r.data || []).map(function(x){ return x.name; });
+  zeichneNamen(belegt);
+
+  abonniere();
 })();
 </script>
 <script src="../zurueck.js"></script>
