@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Eater&family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../auth.js"></script>
+<script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
@@ -455,5 +456,14 @@ spawnParticle();
 <script src="../cam.js"></script>
 <script src="../hintergrund.js"></script>
 <script src="../buehne-skalieren.js"></script>
+
+<script>
+// Turnier: Rolle merken und auf Formatwechsel horchen.
+// Schaltet der Spielleiter weiter, springt dieses Geraet mit.
+if(window.TURNIER){
+  TURNIER.setzeRolle('host');
+  TURNIER.starte(typeof sb !== "undefined" ? sb : null);
+}
+</script>
 </body>
 </html>
