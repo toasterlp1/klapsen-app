@@ -206,10 +206,12 @@
     if (ziel) location.href = ziel;
   }
 
-  // Baut den Knopf unten rechts ein - nur auf Spielleiter-Seiten und
-  // nur, wenn gerade ein Turnier laeuft.
+  // Baut den Knopf unten rechts ein - auf Spielleiter-Seiten (am Pfad
+  // erkannt, nicht an der gespeicherten Rolle, denn die kann fest 'host'
+  // sein) und nur, wenn gerade ein Turnier laeuft.
   async function baueWeiterKnopf() {
-    if (meineRolle() !== 'sl') return;
+    var aufSpielleiterSeite = location.pathname.indexOf('spielleiter') >= 0;
+    if (!aufSpielleiterSeite) return;
     var s = await lade();
     if (!s || !s.laeuft) return;
     if (document.getElementById('turnierWeiter')) return;
@@ -248,6 +250,15 @@
     if (springtGerade) return;
     if (!s || !s.laeuft || !s.aktiv) return;
     if (istFrei()) return;                 // per Home ausgeklinkt -> nicht ziehen
+
+    // Wer gerade auf einer Spielleiter-Seite sitzt, STEUERT das Turnier
+    // (das ist toester). Er darf nicht automatisch weggezogen werden -
+    // sonst landet er sofort wieder auf host.html und der Weiter-Knopf
+    // erscheint nie. Er schaltet selbst ueber den Knopf weiter.
+    if (location.pathname.indexOf('spielleiter') >= 0) {
+      setzeGen(parseInt(s.gen || 0, 10) || 0);  // Stand merken, aber nicht springen
+      return;
+    }
 
     var dbGen = parseInt(s.gen || 0, 10) || 0;
     if (dbGen <= meineGen()) return;       // ich bin schon auf dem Stand
