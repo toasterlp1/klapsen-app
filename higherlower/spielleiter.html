@@ -80,6 +80,13 @@
       <button class="btn-primary" id="startCat">Kategorie starten</button>
       <button class="btn-ghost" id="clearCat">Karten leeren</button>
     </div>
+    <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
+      <span style="font-size:13px;color:var(--muted);">Spiele insgesamt:</span>
+      <input type="number" id="spieleGesamt" min="1" max="20" value="4"
+             style="width:70px;padding:8px;border-radius:8px;
+                    background:#0d1220;border:1px solid #232b45;color:#eef1f8;">
+      <button class="btn-ghost mini" id="spielReset">Zähler auf 0</button>
+    </div>
     <div id="catAktiv"></div>
   </div>
 
@@ -99,7 +106,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const START_LEBEN = 3;
-let state = { players: [], turnName: null, category: null, poolItems: [] };
+let state = { players: [], turnName: null, category: null, poolItems: [],
+              spiel: 0, spieleGesamt: 4 };
 
 function heartSvg(full){
   return `<svg class="${full?'full':'empty'}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.72-4.35-9.35-8.42C1.02 9.92 1.94 6.5 4.87 5.06 7 4.02 9.5 4.64 12 7c2.5-2.36 5-2.98 7.13-1.94 2.93 1.44 3.85 4.86 2.2 7.52C18.72 16.65 12 21 12 21Z"/></svg>`;
@@ -158,6 +166,18 @@ document.getElementById('startCat').onclick = async ()=>{
   if(!cat) return;
   state.category = { name: cat.name, unit: cat.unit || '' };
   state.poolItems = mischen(cat.items).map(it=>({ url: it.url, label: it.label }));
+  // Jede neue Kategorie ist ein neues Spiel
+  state.spiel = (state.spiel || 0) + 1;
+  await speichern();
+};
+
+document.getElementById('spieleGesamt').onchange = async (e)=>{
+  const n = parseInt(e.target.value, 10);
+  if(n >= 1 && n <= 20){ state.spieleGesamt = n; await speichern(); }
+};
+
+document.getElementById('spielReset').onclick = async ()=>{
+  state.spiel = 0;
   await speichern();
 };
 
@@ -195,6 +215,9 @@ async function entfernen(name){
 }
 
 function render(){
+  const sg = document.getElementById('spieleGesamt');
+  if(sg && state.spieleGesamt && document.activeElement !== sg) sg.value = state.spieleGesamt;
+
   const catBox = document.getElementById('catAktiv');
   if(state.category){
     catBox.innerHTML = `<div class="cat-aktiv"><span class="nm">${state.category.name}</span><span style="color:var(--muted);font-size:13px;">${state.poolItems.length} Karten aktiv</span></div>`;
