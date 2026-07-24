@@ -201,33 +201,44 @@ function render(){
 
 async function doBuzz(){
   if(!canIBuzz()) return;
-  const { data, error: leseFehler } = await sb.from('cd_state').select('state').eq('id', 1).single();
-  // Bei Lesefehler NICHT weiterschreiben - sonst wuerde ein
-  // leeres Objekt den ganzen Spielstand ueberschreiben.
-  if(leseFehler || !data || !data.state) return;
-  const s = data.state;
-  const myTeam = s.players?.[myName]?.team;
-  if(!myTeam) return;
-  s.buzzQueue = s.buzzQueue || [];
 
-  if(s.phase==='buzz' && s.buzzQueue.length===0){
-    s.buzzQueue = [myName];
-    s.person1 = myName;
-    s.person2 = null;
-    s.faceoffTurn = 'first';
-    s.activePlayer = myName;
-    s.buzzFlashName = myName;
-    s.buzzFlashAt = Date.now();
-    s.phase = 'faceoff';
-    await sb.from('cd_state').update({ state: s }).eq('id',1);
-  } else if(s.phase==='faceoff' && !s.person2){
-    const person1Team = s.players[s.person1]?.team;
-    if(myTeam !== person1Team && !s.buzzQueue.includes(myName)){
-      s.buzzQueue.push(myName);
-      s.person2 = myName;
+  // Den Platz vergibt die Datenbank. Vorher lasen im Face-off
+  // beide Spieler die leere Warteschlange und trugen sich als
+  // person1 ein - der spaetere Schreibvorgang gewann. Damit
+  // entschied die Netzlaufzeit statt der Reaktion.
+  const { data, error } = await sb.rpc('cd_buzz', { p_name: myName });
+
+  if(error){
+    console.warn('cd_buzz nicht verfuegbar, nutze Rueckfall:', error.message);
+    const r = await sb.from('cd_state').select('state').eq('id', 1).single();
+    if(r.error || !r.data || !r.data.state) return;
+    const s = r.data.state;
+    const myTeam = s.players?.[myName]?.team;
+    if(!myTeam) return;
+    s.buzzQueue = s.buzzQueue || [];
+
+    if(s.phase==='buzz' && s.buzzQueue.length===0){
+      s.buzzQueue = [myName];
+      s.person1 = myName;
+      s.person2 = null;
+      s.faceoffTurn = 'first';
+      s.activePlayer = myName;
+      s.buzzFlashName = myName;
+      s.buzzFlashAt = Date.now();
+      s.phase = 'faceoff';
       await sb.from('cd_state').update({ state: s }).eq('id',1);
+    } else if(s.phase==='faceoff' && !s.person2){
+      const person1Team = s.players[s.person1]?.team;
+      if(myTeam !== person1Team && !s.buzzQueue.includes(myName)){
+        s.buzzQueue.push(myName);
+        s.person2 = myName;
+        await sb.from('cd_state').update({ state: s }).eq('id',1);
+      }
     }
+    return;
   }
+
+  if(data) state = data;
 }
 
 buzzBtn.addEventListener('click', doBuzz);
