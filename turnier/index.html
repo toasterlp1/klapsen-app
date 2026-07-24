@@ -215,8 +215,12 @@ async function beitreten(name){
     ? 'Du bist der Host. Stell das Turnier zusammen und starte, wenn alle da sind.'
     : 'Du bist in der Lobby. Warte, bis töster startet.';
 
-  await ladeLobby();
-  await ladeZustand();
+  // Sofort die richtige Ansicht zeigen (Host = Planung), auch wenn ein
+  // DB-Aufruf gleich haengt.
+  zeichneAnsicht();
+
+  try { await ladeLobby(); } catch(e){ console.warn('ladeLobby:', e); }
+  try { await ladeZustand(); } catch(e){ console.warn('ladeZustand:', e); }
   zeichneAnsicht();
   starteHeartbeat();
 
