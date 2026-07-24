@@ -67,6 +67,7 @@
 }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<script src="../runden.js"></script>
 </head>
 <body>
 <h1>WER IST DAS? — SPIELLEITER</h1>
@@ -241,6 +242,7 @@ document.getElementById('btnCorrect').onclick = async ()=>{
   state.players[active] = (state.players[active]||0) + currentPoints();
   state.solved = true;
   await saveState();
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
 };
 
 document.getElementById('btnWrong').onclick = async ()=>{
@@ -273,6 +275,18 @@ document.getElementById('btnWrong').onclick = async ()=>{
       });
     }
   });
+</script>
+
+<script>
+// Rundenlimit: legt fest, wie viele Runden dieses Format laeuft.
+RUNDEN.init({
+  key: 'wid',
+  state: function(){ return state; },
+  speichern: async function(s){ state = s; await saveState(); },
+  zaehler: function(s){ return (s.usedIndices || []).length; },
+  reset: function(s){ s.usedIndices = []; },
+  standard: 30
+});
 </script>
 </body>
 </html>
