@@ -95,6 +95,7 @@
 }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<script src="../runden.js"></script>
 </head>
 <body>
 <h1>EMOJI-RÄTSEL — SPIELLEITER</h1>
@@ -330,6 +331,7 @@ document.getElementById('btnCorrect').onclick = async ()=>{
   state.players[active] = (state.players[active]||0) + currentPoints();
   state.solved = true;
   await saveState();
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
   setTimeout(()=>{ document.getElementById('btnNewRound').click(); }, 3000);
 };
 
@@ -348,6 +350,7 @@ document.getElementById('btnRevealAnswer').onclick = async ()=>{
   state.revealedCount = 4;
   state.solved = true;
   await saveState();
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
   setTimeout(()=>{ document.getElementById('btnNewRound').click(); }, 3000);
 };
 </script>
@@ -367,6 +370,18 @@ document.getElementById('btnRevealAnswer').onclick = async ()=>{
       });
     }
   });
+</script>
+
+<script>
+// Rundenlimit: legt fest, wie viele Runden dieses Format laeuft.
+RUNDEN.init({
+  key: 'er',
+  state: function(){ return state; },
+  speichern: async function(s){ state = s; await saveState(); },
+  zaehler: function(s){ return (s.usedIndices || []).length; },
+  reset: function(s){ s.usedIndices = []; },
+  standard: 30
+});
 </script>
 </body>
 </html>
