@@ -2,27 +2,30 @@
   Turniermodus
   ------------
   Haelt fest, welche Formate an diesem Abend gespielt werden, und
-  zieht alle Geraete automatisch ins naechste Format, wenn du
+  zieht ALLE Geraete zuverlaessig ins naechste Format, wenn du
   weiterschaltest.
 
-  Wie es laeuft:
-  - Du stellst in turnier/index.html die Formate zusammen
-  - Jede Seite bindet turnier.js ein und meldet ihre Rolle an
-  - Wechselt das aktive Format, springt jedes Geraet auf die
-    passende Seite: Host auf host.html, Buzzer auf buzzer.html,
-    du selbst auf spielleiter.html
+  Warum es jetzt wirklich zieht:
+  Frueher wurde nur "hat sich das aktive Format geaendert?" geprueft.
+  Verpasste ein Geraet den einen Realtime-Moment (Seite lud gerade neu,
+  Realtime hakte, App war kurz im Hintergrund), war die Schaltung fuer
+  dieses Geraet fuer immer verpasst.
 
-  Die Rolle merkt sich das Geraet in localStorage. Wer einmal als
-  Host gestartet ist, bleibt Host - auch nach dem Wechsel.
+  Jetzt zaehlt jede Schaltung einen Zaehler "gen" hoch. Jedes Geraet
+  merkt sich in sessionStorage, welche "gen" es zuletzt umgesetzt hat.
+  Bei jedem Realtime-Event UND bei jedem Poll (alle 2.5s) UND beim
+  Zurueckkehren in den Vordergrund vergleicht es: liegt die gespeicherte
+  gen der Datenbank hoeher als meine? Dann springe ich - egal wie oft
+  ich das Event verpasst habe. Damit gibt es kein "manchmal" mehr.
 */
 (function () {
   'use strict';
 
   var TABELLE = 'turnier_state';
+  var GEN_KEY = 'ka_turnier_gen';   // zuletzt umgesetzte Schaltung (pro Geraet)
+  var FREI_KEY = 'ka_turnier_frei'; // Geraet hat sich per Home ausgeklinkt
 
   // Welche Datei gehoert zu welcher Rolle?
-  // Vier Formate haben alles in einer index.html, dort wird die
-  // Rolle als Parameter uebergeben.
   var WEGE = {
     ausreden:       { host:'host.html', sl:'spielleiter.html', buzzer:'buzzer.html' },
     blackstories:   { host:'host.html', sl:'spielleiter.html', buzzer:'host.html' },
@@ -49,31 +52,50 @@
     skribbl:'Skribbl', stadtlandfluss:'Stadt-Land-Fluss', weristdas:'Wer ist das?'
   };
 
+  /* ---------- Rolle (gerätegebunden, wird NIE aus dem Pfad ueberschrieben) ---------- */
+
   function meineRolle() {
     try {
       var r = localStorage.getItem('ka_rolle');
       if (r) return r;
     } catch (e) {}
-    // Aus dem Pfad ableiten, falls noch nichts gespeichert ist
+    // Nur als allererster Fallback aus dem Pfad ableiten
     var p = location.pathname;
     if (p.indexOf('spielleiter') >= 0) return 'sl';
     if (p.indexOf('buzzer') >= 0) return 'buzzer';
     if (p.indexOf('host') >= 0) return 'host';
-    return null;
+    return 'buzzer'; // im Zweifel Zuschauer/Buzzer, nie ausversehen Host
   }
 
   function setzeRolle(r) {
     try { localStorage.setItem('ka_rolle', r); } catch (e) {}
   }
 
-  function meinFormat() {
-    var teile = location.pathname.split('/').filter(Boolean);
-    // Der vorletzte Teil ist der Ordner, der letzte die Datei
-    return teile.length >= 2 ? teile[teile.length - 2] : null;
+  /* ---------- Ausklinken / Wiedereinklinken (Home-Button) ---------- */
+
+  function istFrei() {
+    try { return sessionStorage.getItem(FREI_KEY) === '1'; } catch (e) { return false; }
+  }
+  function klinkeAus() {
+    try { sessionStorage.setItem(FREI_KEY, '1'); } catch (e) {}
+  }
+  function klinkeEin() {
+    try { sessionStorage.removeItem(FREI_KEY); } catch (e) {}
   }
 
+  /* ---------- gen: zuletzt umgesetzte Schaltung ---------- */
+
+  function meineGen() {
+    try { return parseInt(sessionStorage.getItem(GEN_KEY) || '0', 10) || 0; }
+    catch (e) { return 0; }
+  }
+  function setzeGen(g) {
+    try { sessionStorage.setItem(GEN_KEY, String(g)); } catch (e) {}
+  }
+
+  /* ---------- Pfad-Helfer ---------- */
+
   function wurzel() {
-    // Wie tief liegen wir? /klapsen-app-main/morph/host.html -> eine Ebene
     var teile = location.pathname.split('/').filter(Boolean);
     var datei = teile[teile.length - 1] || '';
     var tiefe = datei.indexOf('.') >= 0 ? 1 : 0;
@@ -86,11 +108,16 @@
     return wurzel() + format + '/' + (w[rolle] || w.host);
   }
 
+  function meinFormat() {
+    var teile = location.pathname.split('/').filter(Boolean);
+    return teile.length >= 2 ? teile[teile.length - 2] : null;
+  }
+
   /* ---------- Anbindung ---------- */
 
   var sb = null;
-  var letztesFormat = null;
   var kanal = null;
+  var springtGerade = false;
 
   async function lade() {
     if (!sb) return null;
@@ -104,29 +131,48 @@
     await sb.from(TABELLE).update({ state: s, updated_at: new Date().toISOString() }).eq('id', 1);
   }
 
+  // Der Kern: liegt die Schaltung der Datenbank vor meiner? Dann ziehen.
   function pruefeWechsel(s) {
-    if (!s || !s.aktiv) return;
+    if (springtGerade) return;
+    if (!s || !s.laeuft || !s.aktiv) return;
+    if (istFrei()) return;                 // per Home ausgeklinkt -> nicht ziehen
+
+    var dbGen = parseInt(s.gen || 0, 10) || 0;
+    if (dbGen <= meineGen()) return;       // ich bin schon auf dem Stand
+
     var rolle = meineRolle();
-    if (!rolle) return;
-
-    // Beim ersten Durchlauf merken, wo wir stehen
-    if (letztesFormat === null) { letztesFormat = s.aktiv; return; }
-    if (s.aktiv === letztesFormat) return;
-
-    letztesFormat = s.aktiv;
     var ziel = zielWeg(s.aktiv, rolle);
+
+    // Merken, dass ich diese Schaltung gesehen habe - auch wenn ich
+    // schon auf der richtigen Seite bin (dann springe ich nicht doppelt).
+    setzeGen(dbGen);
+
     if (!ziel) return;
-    // Kurz warten, damit man den Wechsel bemerkt
-    setTimeout(function () { location.href = ziel; }, 600);
+
+    // Bin ich schon genau da? Dann nicht neu laden.
+    var jetzt = location.pathname.split('/').filter(Boolean);
+    var jetztFormat = jetzt.length >= 2 ? jetzt[jetzt.length - 2] : null;
+    var zielDatei = (WEGE[s.aktiv] && WEGE[s.aktiv][rolle]) || '';
+    var zielHatParam = zielDatei.indexOf('?') >= 0;
+    var binSchonDa = (jetztFormat === s.aktiv) &&
+                     (!zielHatParam ? location.pathname.indexOf(zielDatei.split('?')[0]) >= 0
+                                    : (location.pathname + location.search).indexOf(zielDatei) >= 0);
+    if (binSchonDa) return;
+
+    springtGerade = true;
+    setTimeout(function () { location.href = ziel; }, 400);
   }
 
   function starte(client) {
     sb = client || window.KA_SB;
     if (!sb) return;
 
-    lade().then(function (s) {
-      if (s && s.aktiv) letztesFormat = s.aktiv;
-    });
+    // Wer selbst ein Format oeffnet, klinkt sich wieder ins Turnier ein.
+    // (Die Steuerungsseite ruft danach klinkeAus() erneut auf und bleibt frei.)
+    klinkeEin();
+
+    // Beim Laden sofort abgleichen: bin ich auf dem aktuellen Stand?
+    lade().then(function (s) { pruefeWechsel(s); });
 
     kanal = sb.channel('turnier_' + Math.random().toString(36).slice(2, 8))
       .on('postgres_changes',
@@ -137,11 +183,19 @@
           })
       .subscribe();
 
-    // Sicherheitsnetz, falls Realtime haengt
+    // Sicherheitsnetz: schneller Poll faengt jedes verpasste Event ab
     setInterval(async function () {
       var s = await lade();
       pruefeWechsel(s);
-    }, 8000);
+    }, 2500);
+
+    // Zurueck aus dem Hintergrund (Handy war gesperrt) -> sofort abgleichen
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) lade().then(function (s) { pruefeWechsel(s); });
+    });
+    window.addEventListener('focus', function () {
+      lade().then(function (s) { pruefeWechsel(s); });
+    });
   }
 
   window.TURNIER = {
@@ -152,6 +206,11 @@
     meineRolle: meineRolle,
     meinFormat: meinFormat,
     zielWeg: zielWeg,
+    meineGen: meineGen,
+    setzeGen: setzeGen,
+    klinkeAus: klinkeAus,
+    klinkeEin: klinkeEin,
+    istFrei: istFrei,
     NAMEN: NAMEN,
     WEGE: WEGE
   };
