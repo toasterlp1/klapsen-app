@@ -164,10 +164,12 @@ document.getElementById('btnStart').onclick = async function(){
     schritte: auswahl.slice(),
     index: 0,
     aktiv: auswahl[0].key,
+    gen: 1,                 // erste Schaltung -> alle Geraete ziehen
     gestartet: Date.now()
   };
   await TURNIER.speichere(s);
   turnier = s;
+  TURNIER.setzeGen(1);      // ich (Steuerung) bin schon auf dem Stand, ziehe mich nicht selbst mit
   await setzeRundenZiel(auswahl[0]);
   zeichneLauf();
 };
@@ -202,7 +204,9 @@ document.getElementById('btnWeiter').onclick = async function(){
   }
   turnier.index = naechster;
   turnier.aktiv = turnier.schritte[naechster].key;
+  turnier.gen = (parseInt(turnier.gen || 0, 10) || 0) + 1;  // hochzaehlen -> alle ziehen
   await TURNIER.speichere(turnier);
+  TURNIER.setzeGen(turnier.gen);   // Steuerung bleibt, wo sie ist
   await setzeRundenZiel(turnier.schritte[naechster]);
   zeichneLauf();
 };
@@ -276,11 +280,13 @@ async function ladeStand(){
 
 (async function(){
   TURNIER.setzeRolle('sl');   // wer diese Seite oeffnet, ist Spielleiter
+  TURNIER.klinkeAus();        // die Steuerung wird NIE selbst mitgezogen
   zeichneAuswahl();
   const s = await TURNIER.lade();
   if(s && s.laeuft){
     turnier = s;
     auswahl = s.schritte || [];
+    TURNIER.setzeGen(parseInt(s.gen || 0, 10) || 0); // auf aktuellen Stand, kein Selbst-Sprung
   }
   zeichneLauf();
   ladeStand();
