@@ -117,10 +117,27 @@
   /* ---------- Pfad-Helfer ---------- */
 
   function wurzel() {
+    // Wie viele Ordner-Ebenen liegen wir unter der App-Wurzel?
+    // Der letzte Teil kann eine Datei (host.html) ODER ein Ordnername
+    // sein, wenn die URL auf einen Slash endet (/turnier/). Wir zaehlen
+    // deshalb die ECHTEN Ordner-Ebenen, nicht ob ein Punkt vorkommt.
     var teile = location.pathname.split('/').filter(Boolean);
-    var datei = teile[teile.length - 1] || '';
-    var tiefe = datei.indexOf('.') >= 0 ? 1 : 0;
-    return '../'.repeat(tiefe);
+    var letzter = teile.length ? teile[teile.length - 1] : '';
+    // Endet die URL auf eine Datei (mit .)? Dann zaehlt die Datei nicht als Ordner.
+    var ordner = (letzter.indexOf('.') >= 0) ? teile.slice(0, -1) : teile;
+    // Auf GitHub Pages ist der erste Teil oft der Repo-Name (Projekt-Site).
+    // Wir brauchen nur die Tiefe INNERHALB der App: der Format-Ordner
+    // (z.B. "turnier") ist genau eine Ebene tief. Wir gehen so viele
+    // Ebenen hoch, wie wir im Format-Ordner stecken.
+    // Praktisch: die App-Seiten liegen entweder in der Wurzel (index.html)
+    // oder in genau einem Unterordner (turnier/, morph/, ...).
+    // Daher: steckt der letzte Ordner in unserer WEGE/NAMEN-Welt oder ist
+    // es "turnier", sind wir eine Ebene tief.
+    var appOrdner = { turnier:1, ausreden:1, blackstories:1, 'bluff-quiz':1,
+      chatduell:1, emoji:1, gartic:1, higherlower:1, hotzone:1, imposter:1,
+      millionaer:1, morph:1, quizduell:1, skribbl:1, stadtlandfluss:1, weristdas:1 };
+    var letzterOrdner = ordner.length ? ordner[ordner.length - 1] : '';
+    return appOrdner[letzterOrdner] ? '../' : '';
   }
 
   function zielWeg(format, rolle) {
