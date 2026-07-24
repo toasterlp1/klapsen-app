@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
+<script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
 <script src="../live.js"></script>
 <script src="./categories.js"></script>
@@ -368,5 +369,14 @@ starteLive();
   });
 </script>
 <script src="../zurueck.js"></script>
+
+<script>
+// Turnier: Rolle merken und auf Formatwechsel horchen.
+// Schaltet der Spielleiter weiter, springt dieses Geraet mit.
+if(window.TURNIER){
+  TURNIER.setzeRolle('sl');
+  TURNIER.starte(typeof sb !== "undefined" ? sb : null);
+}
+</script>
 </body>
 </html>
