@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../live.js"></script>
 <script src="../auth.js"></script>
+<script src="../turnier.js"></script>
 <script src="./categories.js"></script>
 <script src="../avatare.js"></script>
 <script src="../symbole.js"></script>
@@ -484,5 +485,14 @@ if(window.KA_LIVE){
 })();
 </script>
 <script src="../host-fx.js"></script>
+
+<script>
+// Turnier: Rolle merken und auf Formatwechsel horchen.
+// Schaltet der Spielleiter weiter, springt dieses Geraet mit.
+if(window.TURNIER){
+  TURNIER.setzeRolle('host');
+  TURNIER.starte(typeof sb !== "undefined" ? sb : null);
+}
+</script>
 </body>
 </html>
