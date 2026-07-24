@@ -518,6 +518,10 @@ window.addEventListener('pagehide', function(){
 
 /* ---------- Start ---------- */
 (async function(){
+  // turnier.js bekommt den Client (fuer lade/speichere), aber wir starten
+  // NICHT die Formatwechsel-Redirects - die Lobby steuert das Ziehen selbst.
+  TURNIER.setClient(sb);
+
   // turnier.js NICHT starten - die Lobby zieht sich selbst nicht,
   // sie steuert. Das Mitziehen passiert auf den Format-Seiten.
   zeichneNamen([]);
