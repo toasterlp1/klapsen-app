@@ -177,6 +177,72 @@
     await sb.from(TABELLE).update({ state: s, updated_at: new Date().toISOString() }).eq('id', 1);
   }
 
+  /* ---------- "Zum naechsten Format" direkt auf der Spielleiter-Seite ---------- */
+
+  // Schaltet das Turnier ein Format weiter (oder beendet es nach dem
+  // letzten). Zaehlt gen hoch, damit alle Geraete mitgezogen werden.
+  async function schalteWeiter() {
+    var s = await lade();
+    if (!s || !s.laeuft || !s.schritte) return;
+    var naechster = (s.index || 0) + 1;
+    if (naechster >= s.schritte.length) {
+      if (!confirm('Das war das letzte Format. Turnier beenden?')) return;
+      s.laeuft = false;
+      s.phase = 'lobby';
+      s.aktiv = null;
+      s.gen = (parseInt(s.gen || 0, 10) || 0) + 1;
+      await speichere(s);
+      // Alle zurueck in die Lobby
+      location.href = wurzel() + 'turnier/';
+      return;
+    }
+    s.index = naechster;
+    s.aktiv = s.schritte[naechster].key;
+    s.gen = (parseInt(s.gen || 0, 10) || 0) + 1;
+    await speichere(s);
+    setzeGen(s.gen);   // ich springe gleich selbst, kein Doppelsprung
+    // Der Spielleiter geht selbst auf die Spielleiter-Ansicht des neuen Formats
+    var ziel = zielWeg(s.aktiv, 'sl');
+    if (ziel) location.href = ziel;
+  }
+
+  // Baut den Knopf unten rechts ein - nur auf Spielleiter-Seiten und
+  // nur, wenn gerade ein Turnier laeuft.
+  async function baueWeiterKnopf() {
+    if (meineRolle() !== 'sl') return;
+    var s = await lade();
+    if (!s || !s.laeuft) return;
+    if (document.getElementById('turnierWeiter')) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = 'turnierWeiter';
+    wrap.style.cssText =
+      'position:fixed;right:16px;bottom:16px;z-index:99998;display:flex;gap:8px;' +
+      'align-items:center;';
+
+    var info = '';
+    var jetzt = (s.schritte && s.schritte[s.index]) ? s.schritte[s.index] : null;
+    if (jetzt && TURNIER.NAMEN[jetzt.key]) {
+      var pos = (s.index + 1) + '/' + s.schritte.length;
+      info = '<span style="font-size:12px;color:#8b96b3;background:rgba(14,18,26,.85);' +
+             'padding:8px 12px;border-radius:999px;border:1px solid #2a3244;">' +
+             pos + ' · ' + TURNIER.NAMEN[jetzt.key] + '</span>';
+    }
+
+    wrap.innerHTML = info +
+      '<button id="turnierWeiterBtn" style="font-family:Inter,sans-serif;font-weight:800;' +
+      'border:none;border-radius:999px;padding:12px 20px;cursor:pointer;font-size:14px;' +
+      'background:#ffd166;color:#241900;box-shadow:0 4px 16px rgba(0,0,0,.4);">' +
+      'Zum nächsten Format →</button>';
+
+    document.body.appendChild(wrap);
+    document.getElementById('turnierWeiterBtn').onclick = function () {
+      this.disabled = true;
+      this.textContent = 'Schalte weiter…';
+      schalteWeiter();
+    };
+  }
+
   // Der Kern: liegt die Schaltung der Datenbank vor meiner? Dann ziehen.
   function pruefeWechsel(s) {
     if (springtGerade) return;
@@ -245,6 +311,13 @@
     // (Die Steuerungsseite ruft danach klinkeAus() erneut auf und bleibt frei.)
     klinkeEin();
 
+    // Auf Spielleiter-Seiten den "Zum naechsten Format"-Knopf einblenden
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', baueWeiterKnopf);
+    } else {
+      baueWeiterKnopf();
+    }
+
     // Beim Laden sofort abgleichen: bin ich auf dem aktuellen Stand?
     lade().then(function (s) { pruefeWechsel(s); });
 
@@ -288,6 +361,8 @@
     istFrei: istFrei,
     loescheRolle: loescheRolle,
     uebernehmeLobbyName: uebernehmeLobbyName,
+    schalteWeiter: schalteWeiter,
+    baueWeiterKnopf: baueWeiterKnopf,
     NAMEN: NAMEN,
     WEGE: WEGE
   };
