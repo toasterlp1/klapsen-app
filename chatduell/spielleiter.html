@@ -423,7 +423,10 @@ document.getElementById('btnResetScores').onclick = async ()=>{
     questionIndex:null, usedIndices:[], currentFrage:null, answers:[], pot:0, phase:'idle',
     buzzQueue:[], person1:null, person2:null, faceoffTurn:'first', controllingTeam:null,
     controlLives:3, controlPasses:0, activePlayer:null, buzzFlashName:null, buzzFlashAt:null,
-    lastResult:null, poolExhausted:false
+    lastResult:null, poolExhausted:false,
+    // Der Rundenzaehler fehlte hier - deshalb lief er immer weiter,
+    // auch nach dem Zuruecksetzen.
+    round:0, stealTeam:null, stealUsed:false, potOwner:null
   });
   await saveState();
 };
