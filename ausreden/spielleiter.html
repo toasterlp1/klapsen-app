@@ -11,6 +11,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
+<script src="../runden.js"></script>
 <script src="situationen.js"></script>
 <script src="../bestenliste.js"></script>
 <style>
@@ -111,6 +112,11 @@ document.getElementById('btnAbstimmen').onclick = async () => {
 document.getElementById('btnAufloesen').onclick = async () => {
   if(!runde) return;
   await sb.from('ausreden_runden').update({ phase:'aufloesung' }).eq('id', runde.id);
+  if(window.arZaehler){
+    window.arZaehler.gespielt = (window.arZaehler.gespielt||0) + 1;
+    localStorage.setItem('ar_gespielt', String(window.arZaehler.gespielt));
+    if(window.RUNDEN) await RUNDEN.rundeFertig();
+  }
   lade();
 };
 
@@ -247,5 +253,28 @@ if(window.KA_LIVE){
 }
 </script>
 <script src="../zurueck.js"></script>
+
+<script>
+// Rundenzaehler: Ausreden legt jede Runde als eigene Zeile an,
+// deshalb zaehlen wir hier lokal mit.
+window.arZaehler = {
+  gespielt: parseInt(localStorage.getItem('ar_gespielt')||'0',10),
+  rundenZiel: parseInt(localStorage.getItem('ar_ziel')||'10',10),
+  rundenFertig: false
+};
+
+RUNDEN.init({
+  key: 'ar',
+  state: function(){ return window.arZaehler; },
+  speichern: async function(s){
+    window.arZaehler = s;
+    localStorage.setItem('ar_gespielt', String(s.gespielt||0));
+    localStorage.setItem('ar_ziel', String(s.rundenZiel||10));
+  },
+  zaehler: function(s){ return s.gespielt || 0; },
+  reset: function(s){ s.gespielt = 0; },
+  standard: 10
+});
+</script>
 </body>
 </html>
