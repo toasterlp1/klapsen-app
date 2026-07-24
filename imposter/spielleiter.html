@@ -81,6 +81,7 @@
 }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<script src="../runden.js"></script>
 </head>
 <body>
 <h1>IMPOSTER — SPIELLEITER</h1>
@@ -342,6 +343,7 @@ document.getElementById('btnEvaluate').onclick = async ()=>{
     state.phase = 'resolved';
   }
   await saveState();
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
 };
 
 document.getElementById('btnGuessCorrect').onclick = async ()=>{
@@ -349,6 +351,7 @@ document.getElementById('btnGuessCorrect').onclick = async ()=>{
   state.lastResult = `Imposter ${state.imposterName} wurde enttarnt, errät aber das Wort "${WOERTER[state.wordIndex].wort}" richtig und bekommt 2 Punkte.`;
   state.phase = 'resolved';
   await saveState();
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
 };
 
 document.getElementById('btnGuessWrong').onclick = async ()=>{
@@ -361,6 +364,7 @@ document.getElementById('btnGuessWrong').onclick = async ()=>{
   state.lastResult = `Imposter ${imp} wurde enttarnt und errät das Wort "${WOERTER[state.wordIndex].wort}" falsch — alle Crew-Mitglieder, die richtig gevotet haben, bekommen 1 Punkt.`;
   state.phase = 'resolved';
   await saveState();
+  if(window.RUNDEN) await RUNDEN.rundeFertig();
 };
 </script>
 <script src="../zurueck.js"></script>
@@ -379,6 +383,18 @@ document.getElementById('btnGuessWrong').onclick = async ()=>{
       });
     }
   });
+</script>
+
+<script>
+// Rundenlimit: legt fest, wie viele Runden dieses Format laeuft.
+RUNDEN.init({
+  key: 'imp',
+  state: function(){ return state; },
+  speichern: async function(s){ state = s; await save(); },
+  zaehler: function(s){ return (s.usedIndices || []).length; },
+  reset: function(s){ s.usedIndices = []; },
+  standard: 15
+});
 </script>
 </body>
 </html>
