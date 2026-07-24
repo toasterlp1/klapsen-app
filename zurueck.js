@@ -35,6 +35,11 @@
 
   btn.addEventListener('click', function () {
 
+    // Wer bewusst zurueck/Home geht, klinkt sich aus dem Turnier aus
+    // und wird nicht mehr ins naechste Format gezogen - bis er selbst
+    // wieder ein Format oeffnet.
+    try { if (window.TURNIER && TURNIER.klinkeAus) TURNIER.klinkeAus(); } catch (e) {}
+
     var kamVonEigenerSeite = document.referrer &&
       document.referrer.indexOf(location.origin) === 0;
 
