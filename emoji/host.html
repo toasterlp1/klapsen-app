@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script src="./raetsel.js"></script>
 <script src="../avatare.js"></script>
+<script src="../host-podest.js"></script>
 <script src="../symbole.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
@@ -338,6 +339,7 @@ let lastRevealedCount = 0;
 let lastRiddleIndex = null;
 
 function render(){
+  if(window.HOSTPODEST && state) HOSTPODEST.pruefe(state);
   if(!state) return;
   const { players={}, riddleIndex=null, revealedCount=0, solved=false, buzzQueue=[], buzzedOut=[] } = state;
 
@@ -481,5 +483,18 @@ if(window.KA_LIVE){
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
 <script src="../host-fx.js"></script>
+
+<script>
+// Zeigt das Podest automatisch, sobald alle Runden gespielt sind.
+HOSTPODEST.init({
+  punkte: function(s){
+    var p = s.players || {};
+    return Object.keys(p).map(function(n){
+      var v = p[n];
+      return { spieler: n, punkte: (typeof v === 'number') ? v : (v && v.score) || 0 };
+    });
+  }
+});
+</script>
 </body>
 </html>
