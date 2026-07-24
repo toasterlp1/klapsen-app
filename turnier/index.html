@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Turnier — Klapsen App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../eingabeschutz.js"></script>
+<script src="../auth.js"></script>
+<script src="../avatare.js"></script>
+<script src="../turnier.js"></script>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#12172a; --rand:#232b45;
+    --ink:#eef1f8; --muted:#6b7488;
+    --gold:#ffd166; --gut:#3ddc84; --akzent:#00e5c7; --bad:#ff3860;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,sans-serif;
+       padding:24px;min-height:100vh;}
+  h1{font-family:Anton,sans-serif;letter-spacing:3px;font-size:32px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:24px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  .karte{background:var(--panel);border:1px solid var(--rand);border-radius:16px;
+         padding:20px;margin-bottom:18px;}
+  .karte h2{font-size:14px;letter-spacing:2px;text-transform:uppercase;
+            color:var(--muted);margin:0 0 14px;}
+  .formate{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+  .fmt{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;
+       background:#0d1220;border:1px solid var(--rand);cursor:pointer;
+       transition:border-color .15s, background .15s;}
+  .fmt:hover{border-color:var(--akzent);}
+  .fmt.an{border-color:var(--gut);background:rgba(61,220,132,.08);}
+  .fmt .nr{font-family:Anton,sans-serif;font-size:15px;color:var(--gut);min-width:18px;}
+  .fmt .nm{font-size:14px;font-weight:700;flex:1;}
+  .fmt input{width:52px;padding:5px;border-radius:7px;background:#12172a;
+             border:1px solid var(--rand);color:var(--ink);font-size:13px;text-align:center;}
+  .reihe{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  button{font-family:Inter,sans-serif;font-weight:800;border:none;border-radius:10px;
+         padding:13px 20px;cursor:pointer;font-size:14px;transition:transform .1s;}
+  button:active{transform:scale(.97);}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  .b-start{background:var(--gut);color:#04120c;}
+  .b-weiter{background:var(--gold);color:#241900;}
+  .b-ghost{background:#1b2138;color:var(--ink);border:1px solid var(--rand);}
+  .b-stop{background:var(--bad);color:#fff;}
+  .lauf{display:flex;flex-direction:column;gap:8px;}
+  .schritt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:11px;
+           background:#0d1220;border:1px solid var(--rand);}
+  .schritt.jetzt{border-color:var(--gold);background:rgba(255,209,102,.09);}
+  .schritt.fertig{opacity:.5;}
+  .schritt .pos{font-family:Anton,sans-serif;font-size:18px;color:var(--muted);min-width:26px;}
+  .schritt.jetzt .pos{color:var(--gold);}
+  .schritt .nm{flex:1;font-weight:700;}
+  .schritt .rd{font-size:12px;color:var(--muted);}
+  .stand{display:flex;flex-direction:column;gap:6px;}
+  .zeile{display:flex;justify-content:space-between;padding:10px 14px;border-radius:9px;
+         background:#0d1220;border:1px solid var(--rand);font-size:14px;}
+  .zeile .p{color:var(--gut);font-weight:800;}
+  .zeile.erster{border-color:var(--gold);}
+  .hinweis{font-size:13px;color:var(--muted);line-height:1.6;margin-top:10px;}
+  @media (max-width:820px){
+    body{padding:14px;}
+    .formate{grid-template-columns:1fr 1fr;}
+    button{width:100%;}
+  }
+</style>
+<link rel="stylesheet" href="../responsive.css" />
+</head>
+<body>
+<div class="wrap">
+  <h1>TURNIER</h1>
+  <div class="sub">Formate zusammenstellen, alle Geräte ziehen automatisch mit</div>
+
+  <div class="karte" id="aufbauKarte">
+    <h2>Formate auswählen</h2>
+    <div class="formate" id="formatListe"></div>
+    <div class="reihe" style="margin-top:16px;">
+      <button class="b-start" id="btnStart" disabled>Turnier starten</button>
+      <button class="b-ghost" id="btnLeeren">Auswahl leeren</button>
+    </div>
+    <div class="hinweis">
+      Reihenfolge = Klickreihenfolge. Die Zahl daneben legt fest, wie viele
+      Runden gespielt werden — sie wird beim Start an das Format übergeben.
+    </div>
+  </div>
+
+  <div class="karte" id="laufKarte" style="display:none;">
+    <h2>Ablauf</h2>
+    <div class="lauf" id="laufListe"></div>
+    <div class="reihe" style="margin-top:16px;">
+      <button class="b-weiter" id="btnWeiter">Zum nächsten Format</button>
+      <button class="b-ghost" id="btnJetzt">Aktuelles Format öffnen</button>
+      <button class="b-stop" id="btnEnde">Turnier beenden</button>
+    </div>
+    <div class="hinweis" id="laufHinweis"></div>
+  </div>
+
+  <div class="karte" id="standKarte" style="display:none;">
+    <h2>Gesamtstand</h2>
+    <div class="stand" id="standListe"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
+const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let auswahl = [];        // [{ key, runden }]
+let turnier = null;
+
+function formatKeys(){
+  return Object.keys(TURNIER.NAMEN);
+}
+
+function zeichneAuswahl(){
+  const box = document.getElementById('formatListe');
+  box.innerHTML = formatKeys().map(function(k){
+    const i = auswahl.findIndex(function(a){ return a.key === k; });
+    const an = i >= 0;
+    const rd = an ? auswahl[i].runden : 10;
+    return '<div class="fmt ' + (an?'an':'') + '" data-k="' + k + '">' +
+           '<span class="nr">' + (an ? (i+1) : '') + '</span>' +
+           '<span class="nm">' + TURNIER.NAMEN[k] + '</span>' +
+           (an ? '<input type="number" min="1" max="99" value="' + rd +
+                 '" data-rd="' + k + '" onclick="event.stopPropagation()">' : '') +
+           '</div>';
+  }).join('');
+
+  box.querySelectorAll('.fmt').forEach(function(el){
+    el.onclick = function(){
+      const k = el.dataset.k;
+      const i = auswahl.findIndex(function(a){ return a.key === k; });
+      if(i >= 0) auswahl.splice(i,1);
+      else auswahl.push({ key:k, runden:10 });
+      zeichneAuswahl();
+      document.getElementById('btnStart').disabled = auswahl.length === 0;
+    };
+  });
+
+  box.querySelectorAll('[data-rd]').forEach(function(inp){
+    inp.onchange = function(e){
+      const k = e.target.dataset.rd;
+      const n = parseInt(e.target.value,10);
+      const a = auswahl.find(function(x){ return x.key === k; });
+      if(a && n >= 1 && n <= 99) a.runden = n;
+    };
+  });
+}
+
+document.getElementById('btnLeeren').onclick = function(){
+  auswahl = [];
+  zeichneAuswahl();
+  document.getElementById('btnStart').disabled = true;
+};
+
+document.getElementById('btnStart').onclick = async function(){
+  if(!auswahl.length) return;
+  const s = {
+    laeuft: true,
+    schritte: auswahl.slice(),
+    index: 0,
+    aktiv: auswahl[0].key,
+    gestartet: Date.now()
+  };
+  await TURNIER.speichere(s);
+  turnier = s;
+  await setzeRundenZiel(auswahl[0]);
+  zeichneLauf();
+};
+
+// Die Rundenzahl in den State des jeweiligen Formats schreiben,
+// damit der Spielleiter sie schon eingestellt vorfindet.
+async function setzeRundenZiel(schritt){
+  const TAB = { morph:'mo_state', weristdas:'wid_state', emoji:'er_state',
+                imposter:'imp_state', chatduell:'cd_state', hotzone:'hz_state',
+                higherlower:'hl_state', millionaer:'wwm_state' };
+  const t = TAB[schritt.key];
+  if(!t) return;
+  const r = await sb.from(t).select('state').eq('id',1).single();
+  if(r.error || !r.data || !r.data.state) return;
+  const st = r.data.state;
+  st.rundenZiel = schritt.runden;
+  st.rundenFertig = false;
+  if(schritt.key === 'higherlower'){ st.spieleGesamt = schritt.runden; st.spiel = 0; }
+  await sb.from(t).update({ state: st }).eq('id',1);
+}
+
+document.getElementById('btnWeiter').onclick = async function(){
+  if(!turnier || !turnier.laeuft) return;
+  const naechster = turnier.index + 1;
+  if(naechster >= turnier.schritte.length){
+    if(!confirm('Das war das letzte Format. Turnier beenden?')) return;
+    turnier.laeuft = false;
+    turnier.aktiv = null;
+    await TURNIER.speichere(turnier);
+    zeichneLauf();
+    return;
+  }
+  turnier.index = naechster;
+  turnier.aktiv = turnier.schritte[naechster].key;
+  await TURNIER.speichere(turnier);
+  await setzeRundenZiel(turnier.schritte[naechster]);
+  zeichneLauf();
+};
+
+document.getElementById('btnJetzt').onclick = function(){
+  if(!turnier || !turnier.aktiv) return;
+  const ziel = TURNIER.zielWeg(turnier.aktiv, 'sl');
+  if(ziel) location.href = ziel;
+};
+
+document.getElementById('btnEnde').onclick = async function(){
+  if(!confirm('Turnier wirklich beenden?')) return;
+  await TURNIER.speichere({ laeuft:false, schritte:[], index:0, aktiv:null });
+  turnier = null;
+  document.getElementById('laufKarte').style.display = 'none';
+  document.getElementById('aufbauKarte').style.display = '';
+  auswahl = [];
+  zeichneAuswahl();
+};
+
+function zeichneLauf(){
+  const auf = document.getElementById('aufbauKarte');
+  const lauf = document.getElementById('laufKarte');
+  if(!turnier || !turnier.laeuft){
+    auf.style.display = '';
+    lauf.style.display = 'none';
+    return;
+  }
+  auf.style.display = 'none';
+  lauf.style.display = '';
+
+  document.getElementById('laufListe').innerHTML = turnier.schritte.map(function(s,i){
+    const cls = i === turnier.index ? 'jetzt' : (i < turnier.index ? 'fertig' : '');
+    return '<div class="schritt ' + cls + '">' +
+           '<span class="pos">' + (i+1) + '</span>' +
+           '<span class="nm">' + TURNIER.NAMEN[s.key] + '</span>' +
+           '<span class="rd">' + s.runden + ' Runden</span></div>';
+  }).join('');
+
+  const jetzt = turnier.schritte[turnier.index];
+  document.getElementById('laufHinweis').textContent = jetzt
+    ? 'Läuft: ' + TURNIER.NAMEN[jetzt.key] + ' · ' + jetzt.runden + ' Runden. ' +
+      'Beim Weiterschalten springen alle Geräte automatisch mit.'
+    : 'Turnier beendet.';
+}
+
+async function ladeStand(){
+  const r = await sb.from('ergebnisse')
+    .select('spieler, punkte, platz, format')
+    .gte('erstellt', new Date(Date.now() - 12*3600*1000).toISOString());
+  if(r.error || !r.data) return;
+
+  const crew = (typeof AVATARE === 'object') ? Object.keys(AVATARE) : [];
+  const summe = {};
+  r.data.forEach(function(e){
+    if(crew.length && crew.indexOf(e.spieler) < 0) return;
+    summe[e.spieler] = (summe[e.spieler] || 0) + (e.punkte || 0);
+  });
+
+  const liste = Object.keys(summe).map(function(n){ return { n:n, p:summe[n] }; })
+                      .sort(function(a,b){ return b.p - a.p; });
+  const karte = document.getElementById('standKarte');
+  if(!liste.length){ karte.style.display = 'none'; return; }
+  karte.style.display = '';
+  document.getElementById('standListe').innerHTML = liste.map(function(x,i){
+    return '<div class="zeile ' + (i===0?'erster':'') + '">' +
+           '<span>' + (i+1) + '. ' + x.n + '</span>' +
+           '<span class="p">' + x.p + '</span></div>';
+  }).join('');
+}
+
+(async function(){
+  TURNIER.setzeRolle('sl');   // wer diese Seite oeffnet, ist Spielleiter
+  zeichneAuswahl();
+  const s = await TURNIER.lade();
+  if(s && s.laeuft){
+    turnier = s;
+    auswahl = s.schritte || [];
+  }
+  zeichneLauf();
+  ladeStand();
+  setInterval(ladeStand, 15000);
+})();
+</script>
+<script src="../zurueck.js"></script>
+</body>
+</html>
