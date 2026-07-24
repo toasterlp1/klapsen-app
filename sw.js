@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'qo-v41';
+const CACHE_VERSION = 'qo-v42';
 
 const PRECACHE = [
   './',
@@ -10,6 +10,7 @@ const PRECACHE = [
   './eingabeschutz.js',
   './live.js',
   './runden.js',
+  './turnier.js',
   './host-podest.js',
   './avatare.js',
   './zurueck.js',
