@@ -165,9 +165,11 @@
 
   async function lade() {
     if (!sb) return null;
-    var r = await sb.from(TABELLE).select('state').eq('id', 1).single();
-    if (r.error || !r.data) return null;
-    return r.data.state || {};
+    // Kein .single() - das wirft einen Fehler, wenn die Zeile fehlt oder
+    // (theoretisch) mehrfach existiert, und dann zieht der Spieler-Poll nie.
+    var r = await sb.from(TABELLE).select('state').eq('id', 1).limit(1);
+    if (r.error || !r.data || !r.data.length) return null;
+    return r.data[0].state || {};
   }
 
   async function speichere(s) {
