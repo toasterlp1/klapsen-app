@@ -36,6 +36,9 @@
   .nm-karte:hover{border-color:var(--akzent);}
   .nm-karte:active{transform:scale(.96);}
   .nm-karte.weg{opacity:.35;pointer-events:none;}
+  .nm-karte.belegt-karte{opacity:.5;}
+  .nm-karte.belegt-karte:hover{opacity:.8;border-color:var(--gold);}
+  .nm-karte .belegt{font-size:10px;color:var(--gold);letter-spacing:1px;}
   .nm-karte img{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#1a2138;}
   .nm-karte .kein{width:64px;height:64px;border-radius:50%;background:#1a2138;
                   display:flex;align-items:center;justify-content:center;
@@ -109,6 +112,13 @@
   <div class="karte" id="wahlKarte">
     <h2>Wer bist du?</h2>
     <div class="namen" id="namenListe"></div>
+    <div class="reihe" style="margin-top:16px;">
+      <button class="b-verlassen" id="btnReset">Lobby zurücksetzen</button>
+    </div>
+    <div class="hinweis">
+      Hängt jemand fest oder ist ein Name grau, obwohl niemand drin ist?
+      „Lobby zurücksetzen" leert die Lobby komplett — danach können alle neu beitreten.
+    </div>
   </div>
 
   <!-- 2. Wartebereich (alle sehen das) -->
@@ -181,14 +191,24 @@ function zeichneNamen(belegt){
     const bild = url
       ? '<img src="' + url + '" alt="">'
       : '<div class="kein">' + n.charAt(0).toUpperCase() + '</div>';
-    const weg = belegt.indexOf(n) >= 0 ? ' weg' : '';
+    const belegtJa = belegt.indexOf(n) >= 0;
+    // Belegte Namen NICHT mehr komplett sperren - nur markieren.
+    // Man kann den Platz uebernehmen (falls man selbst haengengeblieben ist).
+    const marke = belegtJa ? '<span class="belegt">IN LOBBY</span>' : '';
     const du = n === HOST_NAME ? '<span class="du">HOST</span>' : '';
-    return '<div class="nm-karte' + weg + '" data-n="' + n + '">' +
-           bild + '<span class="txt">' + n + '</span>' + du + '</div>';
+    return '<div class="nm-karte' + (belegtJa?' belegt-karte':'') + '" data-n="' + n +
+           '" data-belegt="' + (belegtJa?'1':'0') + '">' +
+           bild + '<span class="txt">' + n + '</span>' + du + marke + '</div>';
   }).join('');
 
   box.querySelectorAll('.nm-karte').forEach(function(el){
-    el.onclick = function(){ beitreten(el.dataset.n); };
+    el.onclick = function(){
+      const n = el.dataset.n;
+      if(el.dataset.belegt === '1'){
+        if(!confirm('"' + n + '" ist schon in der Lobby. Platz übernehmen?\n(Wähle das nur, wenn du selbst hängengeblieben bist.)')) return;
+      }
+      beitreten(n);
+    };
   });
 }
 
@@ -243,6 +263,19 @@ document.getElementById('btnVerlassen').onclick = async function(){
   }
   try { localStorage.removeItem('ka_lobby_name'); } catch(e){}
   TURNIER.loescheRolle();   // feste Rolle aufheben
+  meinName = null; binHost = false;
+  location.reload();
+};
+
+// Komplette Lobby leeren - fuer den Fall, dass Namen haengen bleiben.
+document.getElementById('btnReset').onclick = async function(){
+  if(!confirm('Die ganze Lobby leeren? Alle müssen danach neu beitreten.')) return;
+  try {
+    // Alle Eintraege loeschen (neq auf einen unmoeglichen Namen trifft alle)
+    await sb.from('turnier_lobby').delete().neq('name', '___nie___');
+  } catch(e){ console.warn('reset:', e); }
+  try { localStorage.removeItem('ka_lobby_name'); } catch(e){}
+  TURNIER.loescheRolle();
   meinName = null; binHost = false;
   location.reload();
 };
