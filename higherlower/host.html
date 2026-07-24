@@ -282,6 +282,7 @@ let players = [];
 let turnName = null;
 let category = null;
 let poolItems = [];
+let kartenPos = {};
 let prevLives = {};
 
 function heartSvg(cls){
@@ -310,11 +311,15 @@ function anwenden(s){
   if(neueKat && (!category || neueKat.name !== category.name)){
     category = neueKat;
     poolItems = s.poolItems || [];
+    kartenPos = s.kartenPos || {};
     spawnCards();
   } else if(!neueKat && category){
-    category = null; poolItems = []; spawnCards();
+    category = null; poolItems = []; kartenPos = {}; spawnCards();
   } else if(neueKat && category && neueKat.name === category.name){
     category = neueKat;
+    // Kategorie gleich - nur Positionen haben sich geaendert (jemand
+    // hat verschoben). Live auf die sichtbaren Karten anwenden.
+    if(s.kartenPos) wendePositionenAn(s.kartenPos);
   }
 }
 
@@ -397,14 +402,24 @@ function spawnCards(){
     const rowWidth = itemsInThisRow * cardW + (itemsInThisRow - 1) * gapX;
     const rowStartX = (canvasW - rowWidth) / 2;
 
-    const y = margin + row * (cardH + gapY);
-    const x = rowStartX + col * (cardW + gapX);
+    let y = margin + row * (cardH + gapY);
+    let x = rowStartX + col * (cardW + gapX);
 
     const el = document.createElement('div');
     el.className = 'pcard';
+    el.dataset.idx = i;
     el.style.setProperty('--i', i);
-    el.style.left = Math.max(0, x) + 'px';
-    el.style.top = Math.min(y, canvasH - margin - cardH) + 'px';
+
+    // Gespeicherte Position (in Prozent) anwenden, falls vorhanden -
+    // so sehen alle Geraete dieselbe Anordnung.
+    const gespeichert = (kartenPos && kartenPos[i]) ? kartenPos[i] : null;
+    if(gespeichert){
+      el.style.left = (gespeichert.xp * canvasW) + 'px';
+      el.style.top  = (gespeichert.yp * canvasH) + 'px';
+    } else {
+      el.style.left = Math.max(0, x) + 'px';
+      el.style.top = Math.min(y, canvasH - margin - cardH) + 'px';
+    }
     el.innerHTML = `
       <img src="${item.url}" onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.parentElement.querySelector('.fallback').style.display='flex';">
       <div class="shade"></div>
@@ -414,6 +429,47 @@ function spawnCards(){
     canvas.appendChild(el);
     makeDraggable(el, canvas);
   });
+}
+
+// Positionen aller Karten (in Prozent der Canvas-Groesse). Wird aus dem
+// State gefuellt und beim Verschieben zurueckgeschrieben.
+// (Deklaration steht oben bei poolItems.)
+
+// Wendet Positionen aus dem State auf bereits sichtbare Karten an,
+// ohne neu zu spawnen (fuer Live-Sync waehrend andere verschieben).
+function wendePositionenAn(pos){
+  if(!pos) return;
+  kartenPos = pos;
+  const canvas = document.getElementById('canvas');
+  if(!canvas) return;
+  const cw = canvas.clientWidth || window.innerWidth;
+  const ch = canvas.clientHeight || window.innerHeight;
+  canvas.querySelectorAll('.pcard').forEach(el=>{
+    const i = el.dataset.idx;
+    const p = pos[i];
+    if(p){
+      el.style.left = (p.xp * cw) + 'px';
+      el.style.top  = (p.yp * ch) + 'px';
+    }
+  });
+}
+
+// Schreibt die aktuelle Position einer Karte in den State (nur Host/SL,
+// nicht Zuschauer).
+async function speicherePosition(el, canvas){
+  const cw = canvas.clientWidth || window.innerWidth;
+  const ch = canvas.clientHeight || window.innerHeight;
+  const i = el.dataset.idx;
+  kartenPos[i] = {
+    xp: parseFloat(el.style.left) / cw,
+    yp: parseFloat(el.style.top) / ch
+  };
+  try {
+    const { data } = await sb.from('hl_state').select('state').eq('id',1).limit(1);
+    const st = (data && data[0] && data[0].state) ? data[0].state : {};
+    st.kartenPos = kartenPos;
+    await sb.from('hl_state').update({ state: st }).eq('id',1);
+  } catch(e){ console.warn('hl pos speichern:', e); }
 }
 
 // Im Turnier landen Zuschauer auf dieser Seite, weil es keinen
@@ -443,7 +499,12 @@ function makeDraggable(el, canvas){
     el.style.top = y + 'px';
   });
   document.addEventListener('mouseup', ()=>{
-    if(dragging){ dragging = false; el.classList.remove('dragging'); }
+    if(dragging){
+      dragging = false;
+      el.classList.remove('dragging');
+      // Neue Position fuer alle sichtbar machen
+      speicherePosition(el, canvas);
+    }
   });
 }
 </script>
