@@ -94,6 +94,9 @@
       localStorage.removeItem('ka_rolle_fest');
     } catch (e) {}
   }
+  function istFrei() {
+    try { return sessionStorage.getItem(FREI_KEY) === '1'; } catch (e) { return false; }
+  }
   function klinkeAus() {
     try { sessionStorage.setItem(FREI_KEY, '1'); } catch (e) {}
   }
