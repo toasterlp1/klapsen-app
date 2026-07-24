@@ -294,6 +294,17 @@ function anwenden(s){
   players = s.players || [];
   turnName = s.turnName || null;
   renderLives();
+
+  // Spielzaehler oben rechts: kommt jetzt aus dem State statt
+  // fest verdrahtet dazustehen.
+  const spiel   = s.spiel || 0;
+  const gesamt  = s.spieleGesamt || 4;
+  const gp = document.getElementById('gamePill');
+  if(gp) gp.textContent = spiel > 0
+    ? 'GAME ' + Math.min(spiel, gesamt) + ' / ' + gesamt
+    : 'GAME – / ' + gesamt;
+  const rn = document.getElementById('roundNum');
+  if(rn) rn.textContent = spiel > 0 ? String(spiel) : '–';
   const neueKat = s.category || null;
   if(neueKat && (!category || neueKat.name !== category.name)){
     category = neueKat;
