@@ -154,6 +154,12 @@
   /* ---------- Anbindung ---------- */
 
   var sb = null;
+
+  // Nur den Client setzen, OHNE die Formatwechsel-Redirects zu aktivieren.
+  // Die Lobby braucht lade()/speichere(), aber steuert das Ziehen selbst.
+  function setClient(client) {
+    sb = client || window.KA_SB;
+  }
   var kanal = null;
   var springtGerade = false;
 
@@ -238,6 +244,7 @@
 
   window.TURNIER = {
     starte: starte,
+    setClient: setClient,
     lade: lade,
     speichere: speichere,
     setzeRolle: setzeRolle,
