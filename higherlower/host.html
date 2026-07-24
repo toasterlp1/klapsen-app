@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../auth.js"></script>
+<script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
 <script src="../symbole.js"></script>
 <style>
@@ -415,7 +416,13 @@ function spawnCards(){
   });
 }
 
+// Im Turnier landen Zuschauer auf dieser Seite, weil es keinen
+// Buzzer gibt. Sie sollen zusehen, aber nichts verschieben -
+// das Sortieren bleibt beim Spielleiter.
+const NUR_ZUSCHAUEN = new URLSearchParams(location.search).get('nur') === 'zuschauen';
+
 function makeDraggable(el, canvas){
+  if(NUR_ZUSCHAUEN){ el.style.cursor = 'default'; return; }
   let offsetX = 0, offsetY = 0, dragging = false;
   el.addEventListener('mousedown', (e)=>{
     dragging = true;
@@ -443,5 +450,14 @@ function makeDraggable(el, canvas){
 <script src="../zurueck.js"></script>
 <script src="../cam.js"></script>
 <script src="../host-fx.js"></script>
+
+<script>
+// Turnier: Rolle merken und auf Formatwechsel horchen.
+// Schaltet der Spielleiter weiter, springt dieses Geraet mit.
+if(window.TURNIER){
+  TURNIER.setzeRolle('host');
+  TURNIER.starte(typeof sb !== "undefined" ? sb : null);
+}
+</script>
 </body>
 </html>
