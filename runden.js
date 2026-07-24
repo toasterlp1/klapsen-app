@@ -95,6 +95,40 @@
       lbl.textContent = st.ist + ' / ' + st.ziel + ' gespielt';
       lbl.style.color = (st.ist >= st.ziel && st.ziel > 0) ? '#ffd166' : '#eef1f8';
     }
+    zeigeSperre(st.ist >= st.ziel && st.ziel > 0);
+  }
+
+  // Ist das Ziel erreicht? Formate koennen das vor einer neuen Runde pruefen.
+  function zielErreicht() {
+    var st = stand();
+    return st.ziel > 0 && st.ist >= st.ziel;
+  }
+
+  // Blendet oben einen deutlichen Hinweis ein und sperrt die
+  // "neue Runde"-Knoepfe, sobald das Ziel erreicht ist.
+  function zeigeSperre(an) {
+    var box = document.getElementById('rundenSperre');
+    if (an && !box) {
+      box = document.createElement('div');
+      box.id = 'rundenSperre';
+      box.style.cssText =
+        'margin:10px 0;padding:12px 14px;border-radius:10px;' +
+        'background:rgba(255,209,102,.12);border:1px solid #ffd166;' +
+        'color:#ffd166;font-size:14px;font-weight:700;line-height:1.5;';
+      box.innerHTML = 'Rundenziel erreicht. Schalte unten rechts zum nächsten Format weiter. ' +
+        '(Zum Weiterspielen „Zähler auf 0" oder Runden erhöhen.)';
+      var ref = document.getElementById('rundenBox');
+      if (ref && ref.parentNode) ref.parentNode.insertBefore(box, ref.nextSibling);
+    } else if (!an && box) {
+      box.remove();
+    }
+    // "Neue Runde"-artige Knoepfe sperren/entsperren
+    var knoepfe = document.querySelectorAll('[data-runden-neu]');
+    knoepfe.forEach(function (b) {
+      b.disabled = an;
+      b.style.opacity = an ? '.4' : '';
+      b.style.cursor = an ? 'not-allowed' : '';
+    });
   }
 
   /* Nach jeder abgeschlossenen Runde aufrufen.
@@ -118,19 +152,43 @@
 
   function init(konfig) {
     cfg = konfig;
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () {
-        baueEingabe(); aktualisiere();
-      });
-    } else {
-      baueEingabe(); aktualisiere();
+
+    function los() {
+      baueEingabe();
+      markiereNeuKnoepfe();
+      aktualisiere();
+      // Regelmaessig pruefen, damit die Sperre live greift, sobald das
+      // Ziel erreicht ist - auch wenn der Zaehler woanders hochgesetzt wird.
+      setInterval(aktualisiere, 1500);
     }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', los);
+    } else {
+      los();
+    }
+  }
+
+  // Erkennt "neue Runde"-Knoepfe automatisch an ihrer Beschriftung und
+  // markiert sie, damit sie bei erreichtem Ziel gesperrt werden koennen.
+  function markiereNeuKnoepfe() {
+    var muster = /neuer?\s|neue\s|nächst|naechst|neues?\s|weiter|neue frage|neuer morph|neue runde/i;
+    var alle = document.querySelectorAll('button');
+    alle.forEach(function (b) {
+      var t = (b.textContent || '').trim().toLowerCase();
+      // Nur echte "neue Runde/Frage/Morph"-Knoepfe, keine Turnier-Knoepfe
+      if (b.id === 'turnierWeiterBtn') return;
+      if (/neuer morph|neue runde|neue frage|nächste|naechste|neues rätsel|neues wort|neue aufgabe/i.test(t)) {
+        b.setAttribute('data-runden-neu', '1');
+      }
+    });
   }
 
   window.RUNDEN = {
     init: init,
     aktualisiere: aktualisiere,
     rundeFertig: rundeFertig,
+    zielErreicht: zielErreicht,
     stand: stand
   };
 })();
