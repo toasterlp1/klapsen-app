@@ -199,6 +199,11 @@ input,select{font-family:inherit}
   animation:avatarFloat 4.6s ease-in-out infinite;
   transition:border-color .35s var(--ease),box-shadow .35s var(--ease),transform .35s var(--ease-out);
 }
+.score-card .avatar-fallback{
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,var(--blue),var(--blue-cell2));
+  font-family:'Anton',sans-serif;font-size:26px;color:#fff;
+}
 @keyframes avatarFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 .score-card.turn .avatar-pic,.score-card.ka-live-green .avatar-pic{
   border-color:var(--gold);transform:scale(1.08);
@@ -489,21 +494,37 @@ input,select{font-family:inherit}
 
 /* Turn-Pille rechts unter dem Buzzer */
 #hostView .turn-bar{
-  position:absolute;top:196px;right:30px;
-  margin:0;width:max-content;max-width:min(420px,42vw);
+  position:relative;top:auto;right:auto;left:auto;
+  margin:14px auto 0;width:max-content;max-width:min(420px,60vw);
   z-index:41;
 }
 
 /* Board hoeher, Scores wandern nach unten */
+/* ===== Host-Ansicht: fester Vollbild ohne Scrollen ===== */
+/* Der Host-View ist ein Bildschirm - kein Scrollen. topbar oben,
+   Board in der Mitte, Scores unten mit Abstand. */
+html.host, body.host{height:100%;overflow:hidden;}
+#hostView{
+  height:100vh;height:100dvh;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+#hostView .topbar{flex:0 0 auto;}
+#hostView .board-wrap{
+  flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;justify-content:center;
+  overflow:hidden;
+}
+#hostView .scores{
+  flex:0 0 auto;
+  padding:22px 20px clamp(24px,4vh,48px);gap:14px;
+}
 #hostView .board-wrap{padding-top:26px;}
 #hostView .board-head h2{
   text-align:center;font-family:'Anton',sans-serif;font-style:italic;
   font-size:22px;letter-spacing:4px;color:var(--muted);
 }
 #hostView .board-head{justify-content:center;}
-#hostView .scores{
-  padding:22px 20px 34px;gap:14px;
-}
 #hostView .score-card{min-width:170px;}
 
 @media(max-width:900px){
@@ -922,11 +943,17 @@ function renderHost(){
   if(tb){
     const dranId = (state.phase === 'board') ? state.turn_player_id : state.owner_player_id;
     const dran = players.find(p => p.id === dranId);
-    if(dran){
+    // Nur im Board-Zustand zeigen. Ist ein Frage-Panel offen, steht die
+    // "IST DRAN"-Info schon im Panel - die Pille wuerde sonst die
+    // Kategorie ueberdecken.
+    const panelOffen = state.phase !== 'board';
+    if(dran && !panelOffen){
       $("turnBarName").textContent = dran.name + "'S TURN";
       const av = avatarFor(dran.name);
       const img = $("turnBarAvatar");
-      if(av){ img.src = av; img.style.display = ''; } else { img.style.display = 'none'; }
+      // src nur setzen, wenn wirklich anders -> kein Neuladen/Flackern
+      if(av){ if(img.getAttribute('src') !== av) img.src = av; img.style.display = ''; }
+      else { img.style.display = 'none'; }
       tb.classList.add('show');
     } else {
       tb.classList.remove('show');
@@ -950,44 +977,88 @@ function cardBadgesHtml(p){
 
 function renderScores(container){
   if(!container) return;
-  container.innerHTML='';
-  players.forEach(p=>{
-    const card=document.createElement('div');
-    let cls='score-card';
-    if(state&&state.owner_player_id===p.id&&state.phase!=='board') cls+=' turn';
-    if(state&&state.buzzed_player_id===p.id) cls+=' buzzed';
-    card.className=cls;
-    const tag = (state&&state.buzzed_player_id===p.id)?'GEBUZZERT':((state&&state.owner_player_id===p.id&&state.phase!=='board')?'IST DRAN':'');
-    const jokerCls = jokerAvailable(p)?'':' used';
-    const prev = prevScores[p.id];
-    let bumpCls = '';
-    if(prev!==undefined && prev!==p.score){ bumpCls = p.score>prev ? ' bump-up' : ' bump-down'; }
+
+  // Karten nur EINMAL bauen und danach nur aktualisieren. Vorher wurde
+  // bei jedem State-Update (alle 1.5s) das ganze innerHTML neu gesetzt,
+  // wodurch die Avatar-<img> jedes Mal neu geladen haben -> Flackern.
+  var vorhandene = {};
+  Array.prototype.forEach.call(container.querySelectorAll('.score-card'), function(c){
+    vorhandene[c.dataset.pid] = c;
+  });
+
+  var gesehen = {};
+
+  players.forEach(function(p){
+    gesehen[p.id] = true;
+    var amZug = state && ((state.phase === 'board') ? state.turn_player_id === p.id : state.owner_player_id === p.id);
+    var hatGebuzzert = state && state.buzzed_player_id === p.id;
+    var tag = hatGebuzzert ? 'GEBUZZERT' : (amZug && state.phase!=='board' ? 'IST DRAN' : '');
+    var avatarUrl = avatarFor(p.name);
+
+    var prev = prevScores[p.id];
+    var bumpCls = '';
+    if(prev!==undefined && prev!==p.score){ bumpCls = p.score>prev ? 'bump-up' : 'bump-down'; }
     prevScores[p.id] = p.score;
-    const avatarUrl = avatarFor(p.name);
 
-    const amZug = state && (
-      (state.phase === 'board')
-        ? state.turn_player_id === p.id
-        : state.owner_player_id === p.id
-    );
-    const hatGebuzzert = state && state.buzzed_player_id === p.id;
+    var card = vorhandene[p.id];
 
-    if(amZug || hatGebuzzert) card.classList.add('ka-live-green');
+    if(!card){
+      // Neu anlegen (nur beim ersten Mal oder wenn Spieler dazukommt)
+      card = document.createElement('div');
+      card.dataset.pid = p.id;
+      card.style.position = 'relative';
+      card.innerHTML =
+        '<span class="ka-badge-tr mic-pulse" data-badge hidden></span>' +
+        '<span class="tag"></span>' +
+        (avatarUrl ? '<img class="avatar-pic" src="'+avatarUrl+'" alt="">' : '<div class="avatar-pic avatar-fallback">'+escapeHtml(p.name.charAt(0).toUpperCase())+'</div>') +
+        '<div class="nm">'+escapeHtml(p.name)+'</div>' +
+        '<div class="sc">'+p.score+'</div>' +
+        '<div class="score-badges"></div>';
+      container.appendChild(card);
+    }
 
-    const badge = hatGebuzzert
-      ? `<span class="ka-badge-tr mic-pulse">${KA.mic()}</span>`
-      : (amZug ? `<span class="ka-badge-tr mic-pulse">${KA.mic()}</span>` : '');
+    // Klassen aktualisieren (ohne Neuaufbau)
+    var cls = 'score-card';
+    if(amZug && state.phase!=='board') cls += ' turn';
+    if(hatGebuzzert) cls += ' buzzed';
+    if(amZug || hatGebuzzert) cls += ' ka-live-green';
+    card.className = cls;
 
-    card.style.position = 'relative';
-    card.innerHTML=`${badge}<span class="tag">${tag}</span>
-      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:6px;">` : ''}
-      <div class="nm">${escapeHtml(p.name)}</div>
-      <div class="sc ${p.score<0?'neg':''}${bumpCls}">${p.score}</div>
-      <div class="score-badges">
-        ${cardBadgesHtml(p)}
-        <span class="jokerbadge${jokerCls}" title="${jokerAvailable(p)?'Joker verfügbar':'Joker benutzt'}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3c-3.5 4-7 6.2-7 10a5 5 0 0 0 8.6 3.5c-.2 1.4-.9 2.6-2.1 3.5h5c-1.2-.9-1.9-2.1-2.1-3.5A5 5 0 0 0 19 13c0-3.8-3.5-6-7-10Z" fill="currentColor"/></svg></span>
-      </div>`;
-    container.appendChild(card);
+    // Badge (Mic) ein/aus
+    var badgeEl = card.querySelector('[data-badge]');
+    if(badgeEl){
+      if(amZug || hatGebuzzert){ badgeEl.hidden = false; badgeEl.innerHTML = KA.mic(); }
+      else { badgeEl.hidden = true; badgeEl.innerHTML = ''; }
+    }
+
+    // Tag-Text
+    var tagEl = card.querySelector('.tag');
+    if(tagEl) tagEl.textContent = tag;
+
+    // Punkte (nur wenn geaendert - spart Reflow)
+    var scEl = card.querySelector('.sc');
+    if(scEl){
+      var neuText = String(p.score);
+      if(scEl.textContent !== neuText){
+        scEl.textContent = neuText;
+        scEl.classList.remove('bump-up','bump-down');
+        if(bumpCls){ void scEl.offsetWidth; scEl.classList.add(bumpCls); }
+      }
+      scEl.classList.toggle('neg', p.score < 0);
+    }
+
+    // Joker/Badges aktualisieren
+    var badgesEl = card.querySelector('.score-badges');
+    if(badgesEl){
+      var jokerCls = jokerAvailable(p) ? '' : ' used';
+      badgesEl.innerHTML = cardBadgesHtml(p) +
+        '<span class="jokerbadge'+jokerCls+'" title="'+(jokerAvailable(p)?'Joker verfügbar':'Joker benutzt')+'"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3c-3.5 4-7 6.2-7 10a5 5 0 0 0 8.6 3.5c-.2 1.4-.9 2.6-2.1 3.5h5c-1.2-.9-1.9-2.1-2.1-3.5A5 5 0 0 0 19 13c0-3.8-3.5-6-7-10Z" fill="currentColor"/></svg></span>';
+    }
+  });
+
+  // Karten von Spielern entfernen, die nicht mehr da sind
+  Object.keys(vorhandene).forEach(function(pid){
+    if(!gesehen[pid]) vorhandene[pid].remove();
   });
 }
 
