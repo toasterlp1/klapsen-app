@@ -74,11 +74,18 @@
       <button class="btn-warn" id="btnRevealB" disabled>Person B zeigen</button>
     </div>
 
+    <div class="row" style="margin-top:10px;">
+      <button class="btn-ghost" id="btnLastChance" disabled>LAST CHANCE aktivieren</button>
+    </div>
+    <div class="step-hint" id="lcHint" style="margin-top:6px;">
+      Standard: beide Personen nötig = 3 Punkte. Last Chance: eine Person reicht = 1 Punkt (beide einzeln holbar).
+    </div>
+
     <h2 style="margin-top:20px;">Buzzer-Warteschlange</h2>
     <div class="queue" id="queue"><span style="color:var(--muted);">— niemand gebuzzert —</span></div>
     <div class="row" style="margin-top:14px;">
-      <button class="btn-good" id="btnCorrect" disabled>Richtig (beide)</button>
-      <button class="btn-warn" id="btnHalf" disabled>Nur einer richtig (ab 2 Pkt)</button>
+      <button class="btn-good" id="btnCorrect" disabled>Beide richtig (3 Pkt)</button>
+      <button class="btn-good" id="btnOne" disabled>Eine richtig (1 Pkt)</button>
       <button class="btn-bad" id="btnWrong" disabled>Falsch</button>
     </div>
   </div>
@@ -99,7 +106,7 @@ const SUPABASE_URL = "https://dazabcxqplkvcyeiesgd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemFiY3hxcGxrdmN5ZWllc2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ0NzksImV4cCI6MjA5NzQzMDQ3OX0.N3Dca8Quii4M8nFYLHjzBslby_tBUCyH1-WnPfYW01Y";
 const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const LEER = { players:{}, morphIndex:null, revealStartedAt:null, revealStep:0, buzzQueue:[], buzzedOut:[], usedIndices:[], frozenAt:null };
+const LEER = { players:{}, morphIndex:null, revealStartedAt:null, revealStep:0, buzzQueue:[], buzzedOut:[], usedIndices:[], frozenAt:null, lastChance:false, personenGeholt:0 };
 let state = Object.assign({}, LEER);
 
 async function loadState(){
@@ -118,25 +125,6 @@ sb.channel('mo_state_channel_sl')
     render();
   }).subscribe();
 
-// Die Punkte sinken mit der Zeit, also muss die Anzeige mitlaufen.
-// Sonst bliebe "Nur einer richtig" gesperrt, obwohl die Runde
-// laengst bei 2 Punkten angekommen ist.
-setInterval(() => {
-  if(state && state.morphIndex != null && state.revealStep < 2) render();
-}, 500);
-
-const MAX_PUNKTE = 5;
-const MIN_PUNKTE = 1;
-const PUNKTE_DAUER_MS = 20000;
-
-function currentPoints(){
-  if(!state.revealStartedAt) return MAX_PUNKTE;
-  const bezug = state.frozenAt || Date.now();
-  const elapsed = bezug - state.revealStartedAt;
-  const t = Math.max(0, Math.min(1, elapsed / PUNKTE_DAUER_MS));
-  return Math.max(MIN_PUNKTE, Math.ceil(MAX_PUNKTE - t * (MAX_PUNKTE - MIN_PUNKTE)));
-}
-
 function activeBuzzer(){
   return state.buzzQueue.find(n=>!state.buzzedOut.includes(n));
 }
@@ -148,16 +136,12 @@ function render(){
   const solved = state.revealStep >= 2;
 
   if(eintrag){
-    const stepTxt = state.revealStep === 0 ? 'nur Morph' : (state.revealStep === 1 ? 'Person A aufgedeckt' : 'komplett aufgelöst');
-    // Nach dem Aufdecken ist nur noch 1 Punkt zu holen - das muss
-    // hier stehen, sonst vergibst du im Glauben an die volle Kurve.
-    const p = currentPoints();
-    const wert = state.revealStep >= 1
-      ? '1 Punkt (nur noch eine Person offen)'
-      : (p > 2
-          ? `${p} Punkte — beide Personen noetig`
-          : `${p} Punkte — eine Person reicht (1 Pkt)`);
-    statusLine.innerHTML = `Morph <b>#${state.morphIndex+1}</b> — wert: <b>${wert}</b> — <b>${stepTxt}</b>`;
+    const stepTxt = state.revealStep === 0 ? 'beide verdeckt' : (state.revealStep === 1 ? 'eine Person aufgedeckt' : 'komplett aufgelöst');
+    const wert = state.lastChance
+      ? 'LAST CHANCE — eine Person reicht (1 Punkt, beide einzeln holbar)'
+      : 'Standard — beide Personen nötig (3 Punkte)';
+    const geholt = state.personenGeholt ? ` — ${state.personenGeholt}/2 geholt` : '';
+    statusLine.innerHTML = `Morph <b>#${state.morphIndex+1}</b> — <b>${wert}</b> — <b>${stepTxt}</b>${geholt}`;
     answerReveal.innerHTML = 'Lösung: <b>' + (eintrag.nameA||'?') + '</b><span class="vs">+</span><b>' + (eintrag.nameB||'?') + '</b>';
   } else {
     statusLine.textContent = (state.usedIndices && state.usedIndices.length>=MORPHS.length)
@@ -180,14 +164,18 @@ function render(){
 
   const active = activeBuzzer();
   const hatMorph = state.morphIndex!=null;
-  document.getElementById('btnCorrect').disabled = !active || solved || !hatMorph;
-  // "Nur einer richtig" gibt es erst ab 2 Punkten. Darueber muss
-  // man beide Personen nennen, sonst zaehlt es als falsch.
-  const halbErlaubt = hatMorph && currentPoints() <= 2;
-  document.getElementById('btnHalf').disabled = !active || solved || !halbErlaubt;
+  // "Beide richtig" (3 Pkt) nur im Standard-Modus.
+  document.getElementById('btnCorrect').disabled = !active || solved || !hatMorph || state.lastChance;
+  // "Eine richtig" (1 Pkt) nur im Last-Chance-Modus.
+  document.getElementById('btnOne').disabled = !active || solved || !hatMorph || !state.lastChance;
   document.getElementById('btnWrong').disabled = !active || solved || !hatMorph;
   document.getElementById('btnRevealA').disabled = !hatMorph || state.revealStep >= 1;
   document.getElementById('btnRevealB').disabled = !hatMorph || state.revealStep >= 2;
+  // Last-Chance-Toggle
+  const lc = document.getElementById('btnLastChance');
+  lc.disabled = !hatMorph || solved;
+  lc.textContent = state.lastChance ? 'LAST CHANCE aktiv ✓ (zurück zu Standard)' : 'LAST CHANCE aktivieren';
+  lc.classList.toggle('btn-good', state.lastChance);
 
   const playersEl = document.getElementById('players');
   playersEl.innerHTML = Object.entries(state.players).map(([name,score])=>`
@@ -244,6 +232,8 @@ document.getElementById('btnNewRound').onclick = async ()=>{
   state.buzzQueue = [];
   state.buzzedOut = [];
   state.frozenAt = null;
+  state.lastChance = false;
+  state.personenGeholt = 0;
   await saveState();
 };
 
@@ -262,56 +252,57 @@ document.getElementById('btnRevealB').onclick = async ()=>{
   await saveState();
 };
 
-// Beide Namen richtig -> volle Punkte, komplett auflösen
+// LAST CHANCE manuell umschalten: ab jetzt reicht EINE Person = 1 Punkt,
+// und beide Personen sind einzeln holbar.
+document.getElementById('btnLastChance').onclick = async ()=>{
+  if(state.morphIndex == null) return;
+  state.lastChance = !state.lastChance;
+  await saveState();
+};
+
+// Beide Personen richtig genannt -> 3 Punkte, Runde aufgelöst.
 document.getElementById('btnCorrect').onclick = async ()=>{
   const active = activeBuzzer();
   if(!active) return;
-
-  // Wurde Person A schon aufgedeckt, bleibt nur noch eine uebrig.
-  // Dafuer gibt es genau 1 Punkt - der Rest der Runde ist verschenkt,
-  // weil das Raetsel durch das Aufdecken deutlich leichter wurde.
-  const nurNochEine = state.revealStep >= 1;
-  const punkte = nurNochEine ? 1 : currentPoints();
-
-  state.players[active] = (state.players[active]||0) + punkte;
+  state.players[active] = (state.players[active]||0) + 3;
   state.revealStep = 2;
+  state.personenGeholt = 2;
   await saveState();
   if(window.RUNDEN) await RUNDEN.rundeFertig();
 };
 
-// Nur EINE Person genannt.
-// Bis 3 Punkte gilt das als falsch - man muss beide nennen.
-// Erst ab 2 Punkten (LAST CHANCE) reicht eine Person, dann 1 Punkt.
-document.getElementById('btnHalf').onclick = async ()=>{
+// EINE Person richtig -> nur im LAST-CHANCE-Modus, 1 Punkt.
+// Beide Personen einzeln holbar: erst X (1 Pkt), dann Y (1 Pkt).
+document.getElementById('btnOne').onclick = async ()=>{
   const active = activeBuzzer();
   if(!active) return;
-  if(currentPoints() > 2){
-    alert('Ueber 2 Punkten muessen beide Personen genannt werden.\n' +
-          'Nutze "Falsch", wenn nur eine stimmt.');
+  if(!state.lastChance){
+    alert('„Eine richtig" gilt nur im LAST-CHANCE-Modus.\n' +
+          'Im Standard muessen beide Personen genannt werden (3 Punkte).\n' +
+          'Aktiviere zuerst LAST CHANCE.');
     return;
   }
   state.players[active] = (state.players[active]||0) + 1;
-  // dieser Spieler ist raus für den Rest der Runde, einer bleibt offen
-  state.buzzedOut.push(active);
-  if(state.revealStep < 1) state.revealStep = 1; // eine Person aufdecken
-  if(!activeBuzzer() && state.frozenAt){
-    const pause = Date.now() - state.frozenAt;
-    state.revealStartedAt += pause;
-    state.frozenAt = null;
+  state.personenGeholt = (state.personenGeholt || 0) + 1;
+  if(state.revealStep < 1) state.revealStep = 1;   // eine Person aufdecken
+  state.buzzedOut.push(active);                    // dieser Buzzer erledigt
+
+  if(state.personenGeholt >= 2){
+    state.revealStep = 2;                          // beide geholt -> fertig
+    await saveState();
+    if(window.RUNDEN) await RUNDEN.rundeFertig();
+    return;
   }
+  if(!activeBuzzer()) state.frozenAt = null;
   await saveState();
 };
 
+// Falsch -> Blitz weg (raus für die Runde), andere machen weiter. Kein Abzug.
 document.getElementById('btnWrong').onclick = async ()=>{
   const active = activeBuzzer();
   if(!active) return;
-  state.players[active] = (state.players[active]||0) - 1;
   state.buzzedOut.push(active);
-  if(!activeBuzzer() && state.frozenAt){
-    const pause = Date.now() - state.frozenAt;
-    state.revealStartedAt += pause;
-    state.frozenAt = null;
-  }
+  if(!activeBuzzer()) state.frozenAt = null;
   await saveState();
 };
 </script>
