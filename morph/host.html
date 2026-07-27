@@ -286,7 +286,7 @@
         <div class="lbl">PUNKTE</div>
       </div>
     </div>
-    <div class="points-bar" id="pointsBar">
+    <div class="points-bar" id="pointsBar" style="display:none;">
       <div class="fill" id="pointsFill"></div>
       <div class="lbl" id="pointsBarLbl"></div>
     </div>
@@ -356,7 +356,7 @@ function render(){
       currentIndex = morphIndex;
     }
     placeholder.style.display = 'none';
-    pointsBadge.style.display = 'flex';
+    pointsBadge.style.display = 'none';
 
     // Morph zeigen wenn noch nicht komplett aufgeloest
     morphImg.classList.toggle('show', revealStep < 2);
