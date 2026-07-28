@@ -37,16 +37,16 @@
   html,body{width:1920px;height:1080px;overflow:hidden;}
   body{
     background:
-      radial-gradient(ellipse 80% 60% at 50% 0%, #2d1b52 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 50% 100%, #1e1040 0%, transparent 55%),
-      #0d0820;
+      radial-gradient(ellipse 100% 70% at 50% 0%, #3a2168 0%, transparent 70%),
+      radial-gradient(ellipse 100% 60% at 50% 100%, #301a5c 0%, transparent 75%),
+      linear-gradient(180deg, #2a1a4d 0%, #241547 50%, #23144a 100%);
     color:var(--ink);font-family:'Inter',sans-serif;
     display:flex;flex-direction:column;
   }
 
   body::before{
-    content:'';position:absolute;inset:0;pointer-events:none;
-    background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
     background-size:22px 22px;
   }
 
@@ -274,7 +274,41 @@
 </style>
 <link rel="stylesheet" href="../responsive.css" />
 <link rel="stylesheet" href="../hintergrund-host.css" />
-<style>:root{ --akzent-rgb: 245,197,66; --akzent2-rgb: 50,110,220; }</style>
+<style>
+  :root{ --akzent-rgb: 168,85,247; --akzent2-rgb: 120,60,200; }
+  /* WWM-Hintergrund: durchgehend lila mit Punkte-Raster (ueberschreibt
+     die geteilte hintergrund-host.css nur fuer diese Seite). */
+  body.host, .host body{
+    background-color:#211043 !important;
+    background:
+      radial-gradient(ellipse 100% 70% at 50% 0%, #3a2168 0%, transparent 70%),
+      radial-gradient(ellipse 100% 60% at 50% 100%, #301a5c 0%, transparent 75%),
+      linear-gradient(180deg, #2a1a4d 0%, #241547 50%, #23144a 100%) !important;
+  }
+  body.host::after{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+    background-size:22px 22px;
+  }
+  /* Die Hauptflaeche ist .stage - die geteilte CSS legt dort einen
+     dunklen Verlauf drueber. Fuer WWM lila mit Punkten ueberschreiben. */
+  .host .stage{
+    background:
+      radial-gradient(ellipse 100% 80% at 50% 0%, #3a2168 0%, transparent 70%),
+      radial-gradient(ellipse 100% 70% at 50% 100%, #301a5c 0%, transparent 78%),
+      linear-gradient(180deg, #2a1a4d 0%, #241547 55%, #23144a 100%) !important;
+  }
+  .host .stage::before{
+    content:'' !important;display:block !important;
+    position:absolute;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(255,255,255,.075) 1px, transparent 1px);
+    background-size:22px 22px;
+  }
+  /* Vignette abschwaechen, damit die Punkte auch am Rand sichtbar bleiben */
+  .host .stage::after{ opacity:.35 !important; }
+  /* Inhalt ueber dem Punkte-Raster */
+  .stage > *{ position:relative; z-index:1; }
+</style>
 </head>
 <body class="host">
 
