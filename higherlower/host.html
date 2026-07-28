@@ -200,6 +200,39 @@
 
   .canvas{position:relative;flex:1;min-height:0;}
 
+  /* ===== Timer-Ring ===== */
+  .timer-ring{
+    position:absolute;right:38px;bottom:60px;width:130px;height:130px;z-index:30;
+    filter:drop-shadow(0 0 22px var(--tr-glow, rgba(0,200,255,.5)));
+    transition:filter .5s ease;
+  }
+  .timer-ring svg{width:100%;height:100%;transform:rotate(0deg);}
+  .timer-ring .tr-track{
+    fill:none;stroke:rgba(255,255,255,.08);stroke-width:8;
+  }
+  .timer-ring .tr-prog{
+    fill:none;stroke:var(--tr-color,#22d3ee);stroke-width:8;stroke-linecap:round;
+    stroke-dasharray:326.7;stroke-dashoffset:0;
+    transition:stroke-dashoffset .95s linear, stroke .6s ease;
+  }
+  .timer-ring .tr-label{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;pointer-events:none;
+  }
+  .timer-ring .tr-num{
+    font-family:'Anton',sans-serif;font-size:34px;line-height:1;
+    color:var(--tr-color,#22d3ee);transition:color .6s ease;
+  }
+  .timer-ring .tr-sec{
+    font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.45);font-weight:800;margin-top:2px;
+  }
+  .timer-ring.danger{animation:trPulse .7s ease-in-out infinite;}
+  @keyframes trPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.07);}}
+  @media (max-width:900px){
+    .timer-ring{width:96px;height:96px;right:16px;bottom:20px;}
+    .timer-ring .tr-num{font-size:26px;}
+  }
+
   .pcard{
     position:absolute;width:104px;height:140px;border-radius:11px;
     background:linear-gradient(160deg, var(--panel-2), var(--panel));
@@ -271,6 +304,16 @@
   </div>
 
   <div class="canvas" id="canvas"></div>
+
+  <!-- Timer-Ring (Schmobin-Style): faellt von blau ueber gelb nach rot -->
+  <div class="timer-ring" id="timerRing" style="display:none;">
+    <svg viewBox="0 0 120 120">
+      <circle class="tr-track" cx="60" cy="60" r="52"></circle>
+      <circle class="tr-prog" id="trProg" cx="60" cy="60" r="52"
+              transform="rotate(-90 60 60)"></circle>
+    </svg>
+    <div class="tr-label"><span class="tr-num" id="trNum">0</span><span class="tr-sec">SEC</span></div>
+  </div>
 </div>
 
 <script>
@@ -281,6 +324,68 @@ const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY
 let players = [];
 let turnName = null;
 let category = null;
+
+/* ===== Timer-Ring ===== */
+const TR_UMFANG = 2 * Math.PI * 52;  // Umfang r=52
+let timerRAF = null;
+let timerEnde = null;      // Zeitstempel (ms) wann der Timer ablaeuft
+let timerLen = 30;         // Gesamtdauer in Sekunden (fuer den Ring-Anteil)
+
+function timerFarbe(rest, gesamt){
+  const anteil = gesamt > 0 ? rest / gesamt : 0;
+  if(anteil > 0.5)  return { c:'#22d3ee', g:'rgba(34,211,238,.55)' };   // blau/cyan
+  if(anteil > 0.25) return { c:'#facc15', g:'rgba(250,204,21,.6)'  };   // gelb
+  return                   { c:'#ef4444', g:'rgba(239,68,68,.7)'   };   // rot
+}
+
+function zeichneTimer(){
+  const ring = document.getElementById('timerRing');
+  const prog = document.getElementById('trProg');
+  const num  = document.getElementById('trNum');
+  if(!ring || !prog || !num) return;
+
+  if(!timerEnde){
+    ring.style.display = 'none';
+    if(timerRAF){ cancelAnimationFrame(timerRAF); timerRAF = null; }
+    return;
+  }
+
+  ring.style.display = 'block';
+  const jetzt = Date.now();
+  let rest = Math.max(0, (timerEnde - jetzt) / 1000);
+  const restGanz = Math.ceil(rest);
+
+  const anteil = Math.max(0, Math.min(1, rest / timerLen));
+  prog.style.strokeDashoffset = String(TR_UMFANG * (1 - anteil));
+
+  const f = timerFarbe(rest, timerLen);
+  ring.style.setProperty('--tr-color', f.c);
+  ring.style.setProperty('--tr-glow', f.g);
+  num.textContent = String(restGanz);
+
+  // Pulsieren wenn <= 5 Sekunden
+  ring.classList.toggle('danger', rest <= 5 && rest > 0);
+
+  if(rest <= 0){
+    timerEnde = null;
+    num.textContent = '0';
+    if(timerRAF){ cancelAnimationFrame(timerRAF); timerRAF = null; }
+    return;
+  }
+  timerRAF = requestAnimationFrame(zeichneTimer);
+}
+
+// Timer-Zustand aus dem State uebernehmen
+function timerAusState(s){
+  if(s && s.timerEnde){
+    timerEnde = s.timerEnde;
+    timerLen = s.timerLen || 30;
+    if(!timerRAF) zeichneTimer();
+  } else {
+    timerEnde = null;
+    zeichneTimer();
+  }
+}
 let poolItems = [];
 let kartenPos = {};
 let prevLives = {};
@@ -309,10 +414,16 @@ function anwenden(s){
   if(rn) rn.textContent = spiel > 0 ? String(spiel) : '–';
   const neueKat = s.category || null;
   if(neueKat && (!category || neueKat.name !== category.name)){
+    // Kategorie-WECHSEL: alte Karten smooth ausblenden, dann neue rein.
+    const alterName = category ? category.name : null;
     category = neueKat;
     poolItems = s.poolItems || [];
     kartenPos = s.kartenPos || {};
-    spawnCards();
+    if(alterName){
+      wechsleKategorie();      // mit Fade-Übergang
+    } else {
+      spawnCards();            // erster Aufbau: direkt
+    }
   } else if(!neueKat && category){
     category = null; poolItems = []; kartenPos = {}; spawnCards();
   } else if(neueKat && category && neueKat.name === category.name){
@@ -321,6 +432,50 @@ function anwenden(s){
     // hat verschoben). Live auf die sichtbaren Karten anwenden.
     if(s.kartenPos) wendePositionenAn(s.kartenPos);
   }
+
+  timerAusState(s);   // Timer-Ring aktualisieren
+}
+
+// Smoother Übergang von einer Kategorie zur naechsten:
+// altes Board faded raus & runter, dann neue Kategorie faded rein.
+function wechsleKategorie(){
+  const canvas = document.getElementById('canvas');
+  const pill = document.getElementById('categoryName');
+  if(!canvas){ spawnCards(); return; }
+
+  // Alte Karten ausblenden
+  canvas.querySelectorAll('.pcard').forEach((el, i)=>{
+    el.style.transition = 'opacity .35s ease, transform .4s cubic-bezier(.4,0,.6,1)';
+    el.style.transitionDelay = (i * 18) + 'ms';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px) scale(.9)';
+  });
+  // Kategorie-Pill kurz "flippen"
+  if(pill){
+    pill.style.transition = 'opacity .25s ease, transform .25s ease';
+    pill.style.opacity = '0';
+    pill.style.transform = 'translateY(-8px)';
+  }
+
+  const wartezeit = Math.min(120 + poolItems.length * 18, 500);
+  setTimeout(()=>{
+    spawnCards();               // neue Karten aufbauen (starten unsichtbar)
+    // neue Karten reinfaden
+    canvas.querySelectorAll('.pcard').forEach((el, i)=>{
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-20px) scale(.94)';
+      requestAnimationFrame(()=>{
+        el.style.transition = 'opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1)';
+        el.style.transitionDelay = (i * 30) + 'ms';
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0) scale(1)';
+      });
+    });
+    if(pill){
+      pill.style.opacity = '1';
+      pill.style.transform = 'translateY(0)';
+    }
+  }, wartezeit);
 }
 
 async function ladeState(){
