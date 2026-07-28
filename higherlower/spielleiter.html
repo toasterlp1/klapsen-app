@@ -88,6 +88,17 @@
                     background:#0d1220;border:1px solid #232b45;color:#eef1f8;">
       <button class="btn-ghost mini" id="spielReset">Zähler auf 0</button>
     </div>
+
+    <div class="row" style="margin-top:14px;align-items:center;gap:8px;">
+      <span style="font-size:13px;color:var(--muted);">Timer:</span>
+      <input type="number" id="timerLen" min="5" max="120" value="30"
+             style="width:70px;padding:8px;border-radius:8px;
+                    background:#0d1220;border:1px solid #232b45;color:#eef1f8;">
+      <span style="font-size:13px;color:var(--muted);">Sek.</span>
+      <button class="btn-primary mini" id="timerStart">Timer starten</button>
+      <button class="btn-ghost mini" id="timerStop">Stopp</button>
+    </div>
+
     <div id="catAktiv"></div>
   </div>
 
@@ -179,6 +190,19 @@ document.getElementById('spieleGesamt').onchange = async (e)=>{
 
 document.getElementById('spielReset').onclick = async ()=>{
   state.spiel = 0;
+  await speichern();
+};
+
+// Timer starten: Endzeitpunkt in den State schreiben, Host rendert daraus.
+document.getElementById('timerStart').onclick = async ()=>{
+  const inp = document.getElementById('timerLen');
+  const len = Math.max(5, Math.min(120, parseInt(inp.value, 10) || 30));
+  state.timerLen = len;
+  state.timerEnde = Date.now() + len * 1000;
+  await speichern();
+};
+document.getElementById('timerStop').onclick = async ()=>{
+  state.timerEnde = null;
   await speichern();
 };
 
