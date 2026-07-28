@@ -11,6 +11,7 @@
 <script src="../live.js"></script>
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
+<script src="../avatare.js"></script>
 <script src="../turnier.js"></script>
 <script src="./categories.js"></script>
 <style>
@@ -203,17 +204,39 @@ function showGame(){
 }
 function populateSelect(){
   const current = nameSelect.value;
-  const names = Object.keys(state.players);
+  // Namen aus avatare.js (feste Gruppenliste) - nicht nur aus bereits
+  // hinzugefuegten Spielern, sonst ist die Liste leer, wenn der
+  // Spielleiter noch niemanden angelegt hat.
+  const names = Object.keys(typeof AVATARE!=='undefined' ? AVATARE : {});
   nameSelect.innerHTML = '<option value="">— wähle deinen Namen —</option>' +
-    names.map(n=>`<option value="${n}" ${n===current?'selected':''}>${n} — Team ${state.players[n].team==='blue'?'Blue':'Red'}</option>`).join('');
+    names.map(n=>{
+      const imTeam = state.players && state.players[n];
+      const zusatz = imTeam ? ' — Team '+(state.players[n].team==='blue'?'Blue':'Red') : '';
+      return `<option value="${n}" ${n===current?'selected':''}>${n}${zusatz}</option>`;
+    }).join('');
 }
-if(myName && state.players[myName]) showGame();
+if(myName && (Object.keys(AVATARE||{}).includes(myName))) showGame();
 
-document.getElementById('joinBtn').onclick = ()=>{
+document.getElementById('joinBtn').onclick = async ()=>{
   const val = nameSelect.value;
   if(!val) return;
   myName = val;
   localStorage.setItem('hz_name', myName);
+  // Falls dieser Spieler noch nicht im State ist, automatisch anlegen
+  // (Team wird spaeter vom Spielleiter zugewiesen).
+  if(!state.players) state.players = {};
+  if(!state.players[myName]){
+    try {
+      const { data } = await sb.from('hz_state').select('state').eq('id',1).single();
+      const st = data?.state || state;
+      if(!st.players) st.players = {};
+      if(!st.players[myName]){
+        st.players[myName] = { team:'blue', ready:false };
+        await sb.from('hz_state').update({ state: st }).eq('id',1);
+        state = st;
+      }
+    } catch(e){ console.warn('hotzone join:', e); }
+  }
   showGame();
   render();
 };
@@ -222,7 +245,7 @@ async function loadState(){
   const { data } = await sb.from('hz_state').select('state').eq('id',1).single();
   state = data?.state || state;
   populateSelect();
-  if(myName && state.players[myName] && gameView.style.display==='none') showGame();
+  if(myName && gameView.style.display==='none') showGame();
   render();
 }
 loadState();
