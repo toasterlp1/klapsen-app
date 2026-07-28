@@ -835,6 +835,32 @@ function chooseRole(role){
   if(role==='buzzer'){ $("buzzerView").classList.remove("hidden"); initBuzzer(); }
 }
 
+// Wird das Format ueber das Turnier geoeffnet, steht die Rolle im
+// URL-Parameter (?rolle=host|master|buzzer). Dann die Rollenauswahl
+// ueberspringen und direkt in die richtige Ansicht gehen.
+(function autoRolleAusURL(){
+  try {
+    var params = new URLSearchParams(location.search);
+    var r = params.get('rolle');
+    var map = { host:'host', master:'master', sl:'master', spielleiter:'master', buzzer:'buzzer' };
+    var rolle = map[r];
+    if(!rolle) return;
+    // Lobby-Namen fuer den Buzzer uebernehmen (spart die Namenswahl)
+    try {
+      var lobbyName = localStorage.getItem('ka_lobby_name');
+      if(lobbyName && !localStorage.getItem('quiz_name')){
+        localStorage.setItem('quiz_name', lobbyName);
+      }
+    } catch(e){}
+    // Nach dem Laden die Rolle waehlen
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', function(){ chooseRole(rolle); });
+    } else {
+      chooseRole(rolle);
+    }
+  } catch(e){ console.warn('autoRolle:', e); }
+})();
+
 function subscribeAll(onUpdate){
   sb.channel('quiz-state-ch')
     .on('postgres_changes',{event:'*',schema:'public',table:'quiz_state'},payload=>{
