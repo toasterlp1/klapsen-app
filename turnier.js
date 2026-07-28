@@ -293,7 +293,9 @@
   var NAME_KEYS = {
     ausreden:'ak_name', 'bluff-quiz':'bl_name', chatduell:'cd_name',
     emoji:'er_name', hotzone:'hz_name', millionaer:'wwm_name',
-    morph:'mo_name', weristdas:'wid_name'
+    morph:'mo_name', weristdas:'wid_name',
+    quizduell:'quiz_name', skribbl:'skr_name',
+    stadtlandfluss:'slf_name', gartic:'gp_name'
   };
 
   function uebernehmeLobbyName() {
