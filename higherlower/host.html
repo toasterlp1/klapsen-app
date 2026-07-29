@@ -200,6 +200,65 @@
 
   .canvas{position:relative;flex:1;min-height:0;}
 
+  /* ===== Wechsel-Overlay ===== */
+  #katWechsel{
+    position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,7,15,.82);backdrop-filter:blur(8px);
+    opacity:0;pointer-events:none;transition:opacity .4s ease;
+  }
+  #katWechsel.show{opacity:1;animation:kwBg .35s ease;}
+  @keyframes kwBg{from{backdrop-filter:blur(0)}to{backdrop-filter:blur(8px)}}
+  #katWechsel .kw-inner{text-align:center;transform:scale(.8);opacity:0;}
+  #katWechsel.show .kw-inner{animation:kwIn .6s cubic-bezier(.2,.9,.2,1) forwards;}
+  @keyframes kwIn{0%{transform:scale(.75) translateY(20px);opacity:0}
+                  60%{transform:scale(1.05) translateY(0);opacity:1}
+                  100%{transform:scale(1) translateY(0);opacity:1}}
+  #katWechsel .kw-label{
+    font-size:22px;letter-spacing:8px;color:#ff3b5c;font-weight:800;margin-bottom:14px;
+    text-transform:uppercase;text-shadow:0 0 24px rgba(255,59,92,.6);
+  }
+  #katWechsel .kw-name{
+    font-family:'Anton',sans-serif;font-size:clamp(48px,8vw,110px);color:#fff;line-height:1;
+    text-shadow:0 0 40px rgba(255,59,92,.7),0 6px 30px rgba(0,0,0,.6);
+    letter-spacing:2px;
+  }
+
+  /* ===== Podest / Endstand ===== */
+  #podest{
+    position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,7,15,.88);backdrop-filter:blur(10px);
+    opacity:0;pointer-events:none;transition:opacity .45s ease;
+  }
+  #podest.show{opacity:1;pointer-events:auto;}
+  #podest .pd-inner{
+    background:linear-gradient(165deg,rgba(30,20,55,.96),rgba(16,12,34,.98));
+    border:1px solid rgba(168,85,247,.45);border-radius:26px;padding:38px 46px;
+    box-shadow:0 40px 120px -30px rgba(120,40,200,.7);min-width:min(560px,92vw);
+    transform:translateY(24px) scale(.94);opacity:0;
+  }
+  #podest.show .pd-inner{animation:pdIn .5s cubic-bezier(.2,.9,.2,1) forwards;}
+  @keyframes pdIn{to{transform:translateY(0) scale(1);opacity:1}}
+  #podest .pd-titel{
+    font-family:'Anton',sans-serif;font-size:38px;text-align:center;margin-bottom:24px;
+    color:#ffd166;text-shadow:0 0 30px rgba(255,209,102,.5);letter-spacing:1px;
+  }
+  #podest .pd-liste{display:flex;flex-direction:column;gap:10px;}
+  #podest .pd-row{
+    display:flex;align-items:center;gap:16px;padding:12px 18px;border-radius:14px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  }
+  #podest .pd-row.sieger{
+    background:linear-gradient(100deg,rgba(255,209,102,.16),rgba(255,209,102,.04));
+    border-color:rgba(255,209,102,.5);box-shadow:0 0 30px -8px rgba(255,209,102,.4);
+  }
+  #podest .pd-platz{font-family:'Anton',sans-serif;font-size:26px;color:var(--muted);min-width:34px;}
+  #podest .pd-row.sieger .pd-platz{color:#ffd166;}
+  #podest .pd-row img,#podest .pd-kein{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+  #podest .pd-kein{background:#2a1f4d;display:flex;align-items:center;justify-content:center;
+                   font-family:'Anton',sans-serif;font-size:22px;color:#fff;}
+  #podest .pd-name{flex:1;font-size:22px;font-weight:700;}
+  #podest .pd-leben{font-size:20px;color:#ff3b5c;letter-spacing:2px;}
+
   /* ===== Timer-Ring ===== */
   .timer-ring{
     position:absolute;right:38px;bottom:60px;width:130px;height:130px;z-index:30;
@@ -434,6 +493,80 @@ function anwenden(s){
   }
 
   timerAusState(s);   // Timer-Ring aktualisieren
+  wechselOverlayAusState(s);
+  podestAusState(s);
+}
+
+/* ===== Wechsel-Overlay: grosser Kategorie-Name "NÄCHSTE: XY" ===== */
+let letzteWechselTs = 0;
+function wechselOverlayAusState(s){
+  if(!s || !s.wechselAnzeige) return;
+  const w = s.wechselAnzeige;
+  if(!w.ts || w.ts <= letzteWechselTs) return;
+  letzteWechselTs = w.ts;
+  zeigeWechselOverlay(w.name);
+}
+
+function zeigeWechselOverlay(name){
+  let ov = document.getElementById('katWechsel');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'katWechsel';
+    ov.innerHTML = '<div class="kw-inner"><div class="kw-label">NÄCHSTE KATEGORIE</div><div class="kw-name"></div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.querySelector('.kw-name').textContent = name;
+  ov.classList.remove('show'); void ov.offsetWidth;   // Reflow -> Animation neu
+  ov.classList.add('show');
+  clearTimeout(ov._t);
+  ov._t = setTimeout(()=>{ ov.classList.remove('show'); }, 2600);
+}
+
+/* ===== Podest / Endstand am Kategorie-Ende ===== */
+let letztePodest = '';
+function podestAusState(s){
+  if(!s) return;
+  if(s.kategorieFertig){
+    const key = (s.gewinner||'') + '|' + (s.spiel||0);
+    if(key !== letztePodest){
+      letztePodest = key;
+      zeigePodest(s);
+    }
+  } else {
+    letztePodest = '';
+    const p = document.getElementById('podest');
+    if(p) p.classList.remove('show');
+  }
+}
+
+function zeigePodest(s){
+  let p = document.getElementById('podest');
+  if(!p){
+    p = document.createElement('div');
+    p.id = 'podest';
+    document.body.appendChild(p);
+  }
+  // Spieler nach Leben sortieren (Gewinner oben)
+  const spieler = (s.players||[]).slice().sort((a,b)=> (b.lives||0)-(a.lives||0));
+  const gew = s.gewinner;
+  const zeilen = spieler.map((pl,i)=>{
+    const platz = i+1;
+    const istGew = pl.name === gew;
+    const av = (typeof avatarFor==='function') ? avatarFor(pl.name) : null;
+    const bild = av ? `<img src="${av}" alt="">` : `<div class="pd-kein">${(pl.name||'?').charAt(0).toUpperCase()}</div>`;
+    return `<div class="pd-row ${istGew?'sieger':''}">
+      <span class="pd-platz">${platz}</span>
+      ${bild}
+      <span class="pd-name">${pl.name}</span>
+      <span class="pd-leben">${'♥'.repeat(Math.max(0,pl.lives))||'—'}</span>
+    </div>`;
+  }).join('');
+  p.innerHTML = `<div class="pd-inner">
+    <div class="pd-titel">${gew ? gew + ' gewinnt!' : 'Kategorie beendet'}</div>
+    <div class="pd-liste">${zeilen}</div>
+  </div>`;
+  p.classList.remove('show'); void p.offsetWidth;
+  p.classList.add('show');
 }
 
 // Smoother Übergang von einer Kategorie zur naechsten:
