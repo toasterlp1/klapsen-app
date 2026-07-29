@@ -59,6 +59,20 @@
   .prow .hearts svg{width:18px;height:18px;}
   .prow .hearts .full{color:var(--bad);}
   .prow .hearts .empty{color:#2a3244;}
+  .prow .actions .rf-ok{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.5);color:#4ade80;font-weight:700;}
+  .prow .actions .rf-ok:hover:not(:disabled){background:rgba(34,197,94,.32);}
+  .prow .actions .rf-no{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.5);color:#f87171;font-weight:700;}
+  .prow .actions .rf-no:hover:not(:disabled){background:rgba(239,68,68,.32);}
+  .prow .actions button:disabled{opacity:.35;cursor:not-allowed;}
+  .playlist{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .pl-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+           background:#0d1220;border:1px solid #232b45;}
+  .pl-item.aktiv{border-color:#22d3ee;background:rgba(34,211,238,.1);}
+  .pl-item.fertig{opacity:.5;}
+  .pl-item .pl-nr{font-weight:800;color:var(--muted);min-width:18px;}
+  .pl-item .pl-nm{flex:1;font-weight:600;}
+  .pl-item .pl-tag{font-size:11px;letter-spacing:1px;color:#22d3ee;font-weight:800;text-transform:uppercase;}
+  .pl-item .pl-tag.done{color:var(--muted);}
   .prow .actions{display:flex;gap:6px;}
   .prow .actions button{padding:8px 10px;font-size:13px;border-radius:9px;}
   .prow .mini{background:#1b2138;color:var(--ink);border:1px solid var(--border);}
@@ -73,12 +87,15 @@
   <p class="sub">Steuerung — Kategorie starten, Leben und Zug verwalten.</p>
 
   <div class="card">
-    <div class="card-label">Kategorie</div>
+    <div class="card-label">Kategorie-Playlist</div>
     <div class="row">
       <select id="catSelect"></select>
+      <button class="btn-ghost" id="addCat">+ Hinzufügen</button>
     </div>
-    <div class="row" style="margin-top:10px;">
-      <button class="btn-primary" id="startCat">Kategorie starten</button>
+    <div id="playlistBox" class="playlist"></div>
+    <div class="row" style="margin-top:12px;">
+      <button class="btn-primary" id="startPlaylist">Playlist starten</button>
+      <button class="btn-primary" id="nextCat" style="display:none;">Nächste Kategorie →</button>
       <button class="btn-ghost" id="clearCat">Karten leeren</button>
     </div>
     <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
@@ -129,6 +146,7 @@ function heartSvg(full){
 
 async function speichern(){
   state.updated = Date.now();
+  render();   // sofort aktualisieren, nicht erst beim Realtime-Rueckkanal
   await sb.from('hl_state').update({ state, updated_at: new Date().toISOString() }).eq('id', 1);
 }
 
@@ -174,14 +192,60 @@ function mischen(arr){
   return a;
 }
 
-document.getElementById('startCat').onclick = async ()=>{
+// Eine Kategorie (per Index in CATEGORIES) ins Spiel laden
+function ladeKategorieInState(catIdx){
+  const cat = CATEGORIES[catIdx];
+  if(!cat) return false;
+  state.category = { name: cat.name, unit: cat.unit || '' };
+  state.poolItems = mischen(cat.items).map(it=>({ url: it.url, label: it.label }));
+  state.kartenPos = {};                 // Positionen zuruecksetzen
+  state.spiel = (state.spiel || 0) + 1;
+  // Neue Kategorie -> Leben & Runden frisch
+  state.players.forEach(p=>{ p.lives = START_LEBEN; });
+  state.turnName = state.players[0] ? state.players[0].name : null;
+  state.rundeLebende = null; state.gespieltInRunde = []; state.falschInRunde = [];
+  state.kategorieFertig = false; state.gewinner = null;
+  // Signal fuer den Host, das Wechsel-Overlay zu zeigen
+  state.wechselAnzeige = { name: cat.name, ts: Date.now() };
+  return true;
+}
+
+// Kategorie zur Playlist hinzufuegen
+document.getElementById('addCat').onclick = async ()=>{
   const idx = parseInt(document.getElementById('catSelect').value,10);
   const cat = CATEGORIES[idx];
   if(!cat) return;
-  state.category = { name: cat.name, unit: cat.unit || '' };
-  state.poolItems = mischen(cat.items).map(it=>({ url: it.url, label: it.label }));
-  // Jede neue Kategorie ist ein neues Spiel
-  state.spiel = (state.spiel || 0) + 1;
+  if(!state.playlist) state.playlist = [];
+  state.playlist.push({ catIdx: idx, name: cat.name });
+  await speichern();
+};
+
+// Playlist starten: erste Kategorie laden
+document.getElementById('startPlaylist').onclick = async ()=>{
+  if(!state.playlist || !state.playlist.length){
+    alert('Erst Kategorien zur Playlist hinzufügen.');
+    return;
+  }
+  state.playlistIndex = 0;
+  ladeKategorieInState(state.playlist[0].catIdx);
+  await speichern();
+};
+
+// Naechste Kategorie in der Playlist
+document.getElementById('nextCat').onclick = async ()=>{
+  if(!state.playlist || !state.playlist.length) return;
+  const naechster = (state.playlistIndex ?? -1) + 1;
+  if(naechster >= state.playlist.length){
+    // Playlist zu Ende
+    state.category = null;
+    state.poolItems = [];
+    state.playlistFertig = { ts: Date.now() };
+    await speichern();
+    alert('Das war die letzte Kategorie der Playlist.');
+    return;
+  }
+  state.playlistIndex = naechster;
+  ladeKategorieInState(state.playlist[naechster].catIdx);
   await speichern();
 };
 
@@ -344,6 +408,38 @@ function render(){
     catBox.innerHTML = '';
   }
 
+  // Playlist-Liste rendern
+  const plBox = document.getElementById('playlistBox');
+  if(plBox){
+    const pl = state.playlist || [];
+    if(!pl.length){
+      plBox.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Noch keine Kategorien in der Playlist.</div>';
+    } else {
+      plBox.innerHTML = pl.map((c,i)=>{
+        const aktiv = i === state.playlistIndex;
+        const fertig = i < (state.playlistIndex ?? -1);
+        return `<div class="pl-item ${aktiv?'aktiv':''} ${fertig?'fertig':''}">
+          <span class="pl-nr">${i+1}</span>
+          <span class="pl-nm">${c.name}</span>
+          ${aktiv?'<span class="pl-tag">läuft</span>':(fertig?'<span class="pl-tag done">fertig</span>':`<button class="mini" data-plrm="${i}">✕</button>`)}
+        </div>`;
+      }).join('');
+      plBox.querySelectorAll('[data-plrm]').forEach(b=>b.onclick=async()=>{
+        state.playlist.splice(parseInt(b.dataset.plrm,10),1);
+        await speichern();
+      });
+    }
+  }
+
+  // Start- vs Weiter-Button: läuft die Playlist schon?
+  const laeuft = (state.playlistIndex ?? -1) >= 0 && state.category;
+  const startBtn = document.getElementById('startPlaylist');
+  const nextBtn = document.getElementById('nextCat');
+  if(startBtn && nextBtn){
+    startBtn.style.display = laeuft ? 'none' : '';
+    nextBtn.style.display = laeuft ? '' : 'none';
+  }
+
   fuelleNamen();
 
   const box = document.getElementById('players');
@@ -360,6 +456,8 @@ function render(){
       <span class="nm">${p.name}</span>
       <span class="hearts">${hearts}</span>
       <span class="actions">
+        <button class="mini rf-ok" data-ok="${p.name}" ${tot?'disabled':''}>✓ Richtig</button>
+        <button class="mini rf-no" data-no="${p.name}" ${tot?'disabled':''}>✗ Falsch</button>
         <button class="mini" data-minus="${p.name}">−</button>
         <button class="mini" data-plus="${p.name}">+</button>
         <button class="mini dran-btn" data-dran="${p.name}">Dran</button>
@@ -368,6 +466,8 @@ function render(){
     </div>`;
   }).join('');
 
+  box.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>antwortRichtig(b.dataset.ok));
+  box.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>antwortFalsch(b.dataset.no));
   box.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>lebenAendern(b.dataset.minus,-1));
   box.querySelectorAll('[data-plus]').forEach(b=>b.onclick=()=>lebenAendern(b.dataset.plus,1));
   box.querySelectorAll('[data-dran]').forEach(b=>b.onclick=()=>setzeDran(b.dataset.dran));
