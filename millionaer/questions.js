@@ -20,7 +20,7 @@ const WWM_FRAGEN = [
   { frage: "Welches Tier kann rückwärts fliegen?", antworten: ["Der Adler","Der Kolibri","Die Möwe","Der Papagei"], richtig: 1 },
 
   { frage: "Was passiert mit Bananen, wenn sie zu lange liegen?", antworten: ["Sie werden grün","Sie werden braun","Sie werden hart","Sie schrumpfen zu nichts"], richtig: 1 },
-  { frage: "Welches Land isst pro Kopf am meisten Käse?", antworten: ["Deutschland","Frankreich","Italien","Dänemark"], richtig: 1 },
+  { frage: "Welches Land isst pro Kopf am meisten Käse?", antworten: ["Deutschland","Frankreich","Italien","Schweiz"], richtig: 1 },
 
   { frage: "Was ist Wasabi eigentlich?", antworten: ["Eine Alge","Eine Wurzel","Eine Bohne","Ein Fisch"], richtig: 1 },
   { frage: "Wie lange kann ein Mensch ungefähr ohne Schlaf auskommen?", antworten: ["1 Tag","3 Tage","11 Tage","30 Tage"], richtig: 2 },
