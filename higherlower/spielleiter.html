@@ -97,6 +97,7 @@
       <button class="btn-primary" id="startPlaylist">Playlist starten</button>
       <button class="btn-primary" id="nextCat" style="display:none;">Nächste Kategorie →</button>
       <button class="btn-ghost" id="clearCat">Karten leeren</button>
+      <button class="btn-ghost" id="resetPlaylist" style="border-color:rgba(239,68,68,.5);color:#f87171;">Playlist zurücksetzen</button>
     </div>
     <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
       <span style="font-size:13px;color:var(--muted);">Spiele insgesamt:</span>
@@ -246,6 +247,23 @@ document.getElementById('nextCat').onclick = async ()=>{
   }
   state.playlistIndex = naechster;
   ladeKategorieInState(state.playlist[naechster].catIdx);
+  await speichern();
+};
+
+// Playlist komplett zuruecksetzen: leert Playlist, Index und die laufende
+// Kategorie. Danach kann man frisch neue Kategorien hinzufuegen.
+document.getElementById('resetPlaylist').onclick = async ()=>{
+  if(!confirm('Playlist komplett zurücksetzen? Alle Kategorien werden entfernt.')) return;
+  state.playlist = [];
+  state.playlistIndex = -1;
+  state.category = null;
+  state.poolItems = [];
+  state.kartenPos = {};
+  state.spiel = 0;
+  state.kategorieFertig = false;
+  state.gewinner = null;
+  state.playlistFertig = null;
+  state.wechselAnzeige = null;
   await speichern();
 };
 
