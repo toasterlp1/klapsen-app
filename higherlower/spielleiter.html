@@ -119,7 +119,9 @@ const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY
 
 const START_LEBEN = 3;
 let state = { players: [], turnName: null, category: null, poolItems: [],
-              spiel: 0, spieleGesamt: 4 };
+              spiel: 0, spieleGesamt: 4,
+              playlist: [], playlistIndex: -1,
+              rundeStartName: null, falschInRunde: [], gespieltInRunde: [] };
 
 function heartSvg(full){
   return `<svg class="${full?'full':'empty'}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.72-4.35-9.35-8.42C1.02 9.92 1.94 6.5 4.87 5.06 7 4.02 9.5 4.64 12 7c2.5-2.36 5-2.98 7.13-1.94 2.93 1.44 3.85 4.86 2.2 7.52C18.72 16.65 12 21 12 21Z"/></svg>`;
@@ -226,6 +228,98 @@ async function lebenAendern(name, delta){
   if(!p) return;
   p.lives = Math.max(0, Math.min(START_LEBEN, p.lives + delta));
   await speichern();
+}
+
+// --- Lebende Spieler in fester Reihenfolge (fuer Zug + Runde) ---
+function lebende(){ return state.players.filter(p=>p.lives > 0); }
+
+// Naechsten dran finden - unter denen, die zu Rundenbeginn lebten und
+// noch nicht dran waren; sonst zyklisch unter den aktuell Lebenden.
+function naechsterDran(name){
+  // Bevorzugt jemand aus der aktuellen Runde, der noch nicht dran war
+  const offen = (state.rundeLebende || []).filter(n =>
+    !state.gespieltInRunde.includes(n)
+  );
+  if(offen.length) return offen[0];
+  const leb = lebende();
+  if(!leb.length) return null;
+  const idx = leb.findIndex(p=>p.name===name);
+  return leb[(idx+1) % leb.length].name;
+}
+
+// Runde initialisieren, falls noch keine laeuft
+function startRundeFalls(){
+  if(!state.rundeLebende || !state.rundeLebende.length ||
+     state.gespieltInRunde.length === 0){
+    // Wer lebt zu Beginn dieser Runde?
+    state.rundeLebende = lebende().map(p=>p.name);
+    state.rundeStartLeben = {};
+    lebende().forEach(p=>{ state.rundeStartLeben[p.name] = p.lives; });
+    state.gespieltInRunde = [];
+    state.falschInRunde = [];
+  }
+}
+
+// Prueft, ob die Runde komplett ist (jeder, der zu Rundenbeginn lebte,
+// war dran) und wendet die Comeback-Regel an.
+function pruefeRundenEnde(){
+  const rundenSpieler = state.rundeLebende || [];
+  const alleGespielt = rundenSpieler.every(n => state.gespieltInRunde.includes(n));
+  if(!alleGespielt) return;
+
+  // Comeback: Hatten ALLE Rundenspieler zu Rundenbeginn nur 1 Leben
+  // UND lagen ALLE in dieser Runde falsch?
+  const alleHatten1 = rundenSpieler.length > 1 &&
+    rundenSpieler.every(n => (state.rundeStartLeben[n] || 0) === 1);
+  const alleFalsch = rundenSpieler.every(n => state.falschInRunde.includes(n));
+
+  if(alleHatten1 && alleFalsch){
+    // Jeder Rundenspieler bekommt 1 Leben zurueck (Showdown-Rettung)
+    state.players.forEach(p=>{
+      if(rundenSpieler.includes(p.name)){
+        p.lives = Math.min(START_LEBEN, Math.max(p.lives, 0) + 1);
+      }
+    });
+    state.showdownHinweis = Date.now();
+  }
+  // Neue Runde vorbereiten
+  state.gespieltInRunde = [];
+  state.falschInRunde = [];
+  state.rundeLebende = null;   // wird beim naechsten Zug neu gesetzt
+}
+
+// RICHTIG: Spieler bleibt, naechster ist dran
+async function antwortRichtig(name){
+  startRundeFalls();
+  if(!state.gespieltInRunde.includes(name)) state.gespieltInRunde.push(name);
+  state.turnName = naechsterDran(name);
+  pruefeRundenEnde();
+  await speichern();
+  pruefeKategorieEnde();
+}
+
+// FALSCH: Spieler verliert 1 Leben, wird als "falsch" markiert
+async function antwortFalsch(name){
+  startRundeFalls();
+  const p = state.players.find(x=>x.name===name);
+  if(!p) return;
+  p.lives = Math.max(0, p.lives - 1);
+  if(!state.gespieltInRunde.includes(name)) state.gespieltInRunde.push(name);
+  if(!state.falschInRunde.includes(name)) state.falschInRunde.push(name);
+  state.turnName = naechsterDran(name);
+  pruefeRundenEnde();
+  await speichern();
+  pruefeKategorieEnde();
+}
+
+// Kategorie zu Ende, wenn nur noch einer (oder keiner) lebt
+function pruefeKategorieEnde(){
+  const leb = lebende();
+  if(leb.length <= 1){
+    state.kategorieFertig = true;
+    state.gewinner = leb[0] ? leb[0].name : null;
+    speichern();
+  }
 }
 
 async function setzeDran(name){
