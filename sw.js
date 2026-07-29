@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'qo-v56';
+const CACHE_VERSION = 'qo-v57';
 
 const PRECACHE = [
   './',
