@@ -10,6 +10,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
 <script src="./morphs.js"></script>
 <style>
   :root{
@@ -82,7 +83,9 @@
     </div>
 
     <h2 style="margin-top:20px;">Buzzer-Warteschlange</h2>
-    <div class="queue" id="queue"><span style="color:var(--muted);">— niemand gebuzzert —</span></div>
+    <div class="queue" id="queue">
+      <span id="queueLeer" style="color:var(--muted);">— niemand gebuzzert —</span>
+    </div>
     <div class="row" style="margin-top:14px;">
       <button class="btn-good" id="btnCorrect" disabled>Beide richtig (3 Pkt)</button>
       <button class="btn-good" id="btnOne" disabled>Eine richtig (1 Pkt)</button>
@@ -108,6 +111,24 @@ const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY
 
 const LEER = { players:{}, morphIndex:null, revealStartedAt:null, revealStep:0, buzzQueue:[], buzzedOut:[], usedIndices:[], frozenAt:null, lastChance:false, personenGeholt:0 };
 let state = Object.assign({}, LEER);
+
+// Buzz-Warteschlange ruhig verwalten: Eintraege bleiben im DOM
+// bestehen, nur Klassen/Text werden aktualisiert - kein
+// innerHTML-Neuaufbau bei jedem Realtime-Tick mehr.
+const queueListe = KernRender.liste(document.getElementById('queue'), {
+  schluessel: n => n,
+  erstellen: () => {
+    const el = document.createElement('div');
+    el.className = 'queue-item';
+    return el;
+  },
+  aktualisieren: (el, name, i) => {
+    const out = state.buzzedOut.includes(name);
+    const isActive = state.buzzQueue.find(n => !state.buzzedOut.includes(n)) === name;
+    el.className = `queue-item ${isActive ? 'active' : ''} ${out ? 'out' : ''}`;
+    KernRender.textWennGeaendert(el, name + (isActive ? ' ← dran' : ''));
+  }
+});
 
 async function loadState(){
   const { data } = await sb.from('mo_state').select('state').eq('id',1).single();
@@ -150,17 +171,9 @@ function render(){
     answerReveal.textContent = '';
   }
 
-  const queueEl = document.getElementById('queue');
-  if(state.buzzQueue.length===0){
-    queueEl.innerHTML = '<span style="color:var(--muted);">— niemand gebuzzert —</span>';
-  } else {
-    const active = activeBuzzer();
-    queueEl.innerHTML = state.buzzQueue.map(n=>{
-      const out = state.buzzedOut.includes(n);
-      const isActive = n===active;
-      return `<div class="queue-item ${isActive?'active':''} ${out?'out':''}">${n}${isActive?' ← dran':''}</div>`;
-    }).join('');
-  }
+  const queueLeer = document.getElementById('queueLeer');
+  queueLeer.style.display = state.buzzQueue.length===0 ? '' : 'none';
+  queueListe.render(state.buzzQueue);
 
   const active = activeBuzzer();
   const hatMorph = state.morphIndex!=null;
