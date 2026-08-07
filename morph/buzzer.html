@@ -37,23 +37,15 @@
     color:#fff;font-weight:900;font-size:16px;cursor:pointer;transition:transform .15s var(--ease);
   }
   button.join:active{transform:scale(.97);}
-  .buzz-btn{
-    width:260px;height:260px;border-radius:50%;border:none;
-    background:radial-gradient(circle at 35% 30%, #ff5470, var(--bad));
-    box-shadow:0 0 50px rgba(255,56,96,.5);
-    color:#fff;font-family:'Anton',sans-serif;font-size:40px;letter-spacing:2px;
-    cursor:pointer;transition:transform .12s var(--ease), box-shadow .3s var(--ease), background .3s var(--ease);
-    animation:buzzReady 2s ease-in-out infinite;
-  }
-  @keyframes buzzReady{0%,100%{box-shadow:0 0 50px rgba(255,56,96,.5);}50%{box-shadow:0 0 70px rgba(255,56,96,.75);}}
-  .buzz-btn:active{transform:scale(.94);}
-  .buzz-btn:disabled{background:#1b2138;box-shadow:none;color:var(--muted);cursor:not-allowed;animation:none;}
+  /* Buzz-Knopf-Optik kommt aus kern-turn.css (.kern-buzzer-btn) */
   .status{margin-top:22px;font-size:15px;color:var(--muted);}
   .status b{color:var(--ink);}
   .out{color:var(--bad);}
   .active{color:var(--warn);}
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-turn.css" />
+<style>:root{ --kern-akzent: 255,56,96; }</style>
 </head>
 <body>
 <div class="wrap" id="joinView">
@@ -64,7 +56,7 @@
 
 <div class="wrap" id="gameView" style="display:none;">
   <h1 id="greeting"></h1>
-  <button class="buzz-btn" id="buzzBtn">BUZZ</button>
+  <button class="kern-buzzer-btn gesperrt" id="buzzBtn">BUZZ</button>
   <div class="status" id="status">Warte auf Bild…</div>
 </div>
 
@@ -143,6 +135,8 @@ function render(){
   const canBuzz = hasImage && !solved && !alreadyBuzzed;
 
   buzzBtn.disabled = !canBuzz;
+  buzzBtn.classList.toggle('bereit', canBuzz);
+  buzzBtn.classList.toggle('gesperrt', !canBuzz);
   if(!hasImage){
     statusEl.innerHTML = 'Warte auf Bild…';
   } else if(solved){
@@ -161,6 +155,10 @@ function render(){
 
 async function doBuzz(){
   if(buzzBtn.disabled) return;
+
+  buzzBtn.classList.remove('gedrueckt');
+  void buzzBtn.offsetWidth;
+  buzzBtn.classList.add('gedrueckt');
 
   // Vorpruefung im Browser: spart einen Aufruf, wenn ohnehin nichts geht
   const { data, error: leseFehler } = await sb.from('mo_state').select('state').eq('id', 1).single();
