@@ -12,6 +12,9 @@
 <script src="../turnier.js"></script>
 <script src="./bilder.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-timer.js"></script>
+<script src="../kern-render.js"></script>
+<script src="../kern-turn.js"></script>
 <script src="../host-podest.js"></script>
 <script src="../symbole.js"></script>
 <style>
@@ -207,7 +210,8 @@
 </style>
 <link rel="stylesheet" href="../responsive.css" />
 <link rel="stylesheet" href="../hintergrund-host.css" />
-<style>:root{ --akzent-rgb: 0,229,199; --akzent2-rgb: 90,120,250; }</style>
+<link rel="stylesheet" href="../kern-turn.css" />
+<style>:root{ --akzent-rgb: 0,229,199; --akzent2-rgb: 90,120,250; --kern-akzent: 0,229,199; --kern-akzent2: 90,120,250; }</style>
 </head>
 <body class="host">
 <div class="stage">
@@ -218,10 +222,7 @@
 
   <div class="buzz-side">
     <div class="buzz-orb">BUZZER</div>
-    <div class="buzz-order">
-      <div class="head">Buzz Order</div>
-      <div class="list" id="buzzOrderList"><span class="leer">—</span></div>
-    </div>
+    <div id="kernBuzzListeSlot"></div>
   </div>
 
   <div class="frame-outer">
@@ -276,6 +277,7 @@ const scoreboardEl = document.getElementById('scoreboard');
 let currentImg = null;
 let currentImgIndex = null;
 let state = null;
+const kernBuzzListe = KernTurn.buzzListe(document.getElementById('kernBuzzListeSlot'), { titel: 'BUZZ ORDER' });
 
 function currentPoints(elapsed){
   const t = Math.max(0, Math.min(1, elapsed / PUNKTE_DAUER_MS));
@@ -342,16 +344,7 @@ function render(){
   activeBuzzerEl.textContent = active && !solved ? active + ' ist dran!' : '';
   activeBuzzerEl.classList.toggle('show', !!(active && !solved));
 
-  const orderList = document.getElementById('buzzOrderList');
-  if(orderList){
-    orderList.innerHTML = buzzQueue.length
-      ? buzzQueue.map((n,i)=>{
-          const raus = buzzedOut.includes(n);
-          return `<div class="row" style="${raus?'opacity:.35;text-decoration:line-through;':''}">`
-               + `<span class="idx">${i+1}</span><span>${n}</span></div>`;
-        }).join('')
-      : '<span class="leer">—</span>';
-  }
+  kernBuzzListe.aktualisieren(buzzQueue, active, buzzedOut);
 
   if(solved && imageIndex!=null && BILDER[imageIndex]){
     solvedBanner.classList.add('show');
@@ -368,8 +361,10 @@ function tick(){
 
   if(state && state.imageIndex!=null && state.revealStartedAt && !state.solved && currentImg){
 
-    const jetzt = state.frozenAt || Date.now();
-    const elapsed = jetzt - state.revealStartedAt;
+    // KernTimer.verstrichen() nutzt IMMER frozenAt als Bezugspunkt,
+    // wenn er gesetzt ist - es ist strukturell nicht mehr moeglich,
+    // das Einfrieren an dieser Stelle zu vergessen.
+    const elapsed = KernTimer.verstrichen(state, 'revealStartedAt');
 
     let blur;
     if(elapsed < PHASE1_MS){
