@@ -11,6 +11,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
 <style>
   .avatar-pic{
   width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;
@@ -345,23 +346,40 @@ async function adjustScore(i, delta){
   renderPlayers();
 }
 
+const spielerListe = KernRender.liste(document.getElementById('playerList'), {
+  schluessel: p => p.name,
+  erstellen: () => {
+    const el = document.createElement('div');
+    el.className = 'player-row';
+    el.innerHTML = `
+      <span class="pname"></span>
+      <span class="pscore"></span>
+      <div class="ptools">
+        <button class="small" data-minus>&minus;</button>
+        <button class="small" data-plus>+</button>
+        <button class="small" data-up>&uarr;</button>
+        <button class="small" data-down>&darr;</button>
+        <button class="small red" data-del>&times;</button>
+      </div>`;
+    return el;
+  },
+  aktualisieren: (el, p, i) => {
+    const dran = state.meta.phase === 'active' && i === state.turnIndex;
+    el.className = `player-row ${dran ? 'turn' : ''}`;
+    KernRender.textWennGeaendert(el.querySelector('.pname'), p.name);
+    KernRender.textWennGeaendert(el.querySelector('.pscore'), p.score);
+    el.querySelector('[data-minus]').onclick = () => adjustScore(i, -1);
+    el.querySelector('[data-plus]').onclick = () => adjustScore(i, 1);
+    el.querySelector('[data-up]').onclick = () => movePlayer(i, -1);
+    el.querySelector('[data-down]').onclick = () => movePlayer(i, 1);
+    el.querySelector('[data-del]').onclick = () => removePlayer(i);
+  }
+});
+
 function renderPlayers(){
-  const list = document.getElementById('playerList');
   const hint = document.getElementById('playerEmptyHint');
   hint.style.display = state.players.length ? 'none' : 'block';
-  list.innerHTML = state.players.map((p,i) => `
-    <div class="player-row ${state.meta.phase==='active' && i===state.turnIndex ? 'turn' : ''}">
-      <span class="pname">${escapeHtml(p.name)}</span>
-      <span class="pscore">${p.score}</span>
-      <div class="ptools">
-        <button class="small" onclick="adjustScore(${i},-1)">&minus;</button>
-        <button class="small" onclick="adjustScore(${i},1)">+</button>
-        <button class="small" onclick="movePlayer(${i},-1)">&uarr;</button>
-        <button class="small" onclick="movePlayer(${i},1)">&darr;</button>
-        <button class="small red" onclick="removePlayer(${i})">&times;</button>
-      </div>
-    </div>
-  `).join('');
+  spielerListe.render(state.players);
 }
 
 function renderPool(){
