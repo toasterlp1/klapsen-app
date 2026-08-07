@@ -11,6 +11,7 @@
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
 <script src="../symbole.js"></script>
 <style>
   :root{
@@ -212,6 +213,23 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let myName = localStorage.getItem('gp_name') || '';
 let state = null;
+
+// Lobby-Spielerkacheln ruhig verwalten - Avatare werden nur beim
+// ersten Anlegen geladen.
+const garticLobbyListe = KernRender.liste(document.getElementById('lobbyPlayers'), {
+  schluessel: nm => nm,
+  erstellen: nm => {
+    const av = avatarFor(nm);
+    const el = document.createElement('div');
+    el.className = 'lp';
+    el.innerHTML = `${av ? `<img src="${av}">` : ''}<span class="nm"></span><span class="host" style="display:none;">LEADER</span>`;
+    return el;
+  },
+  aktualisieren: (el, nm) => {
+    KernRender.textWennGeaendert(el.querySelector('.nm'), nm);
+    el.querySelector('.host').style.display = state.hostName === nm ? '' : 'none';
+  }
+});
 let beitraege = [];
 let abgegeben = false;
 let letzteStation = null;
@@ -527,11 +545,7 @@ function render(){
                                          : 'Warte auf den Start durch ' + (state.hostName || '…');
     $('stepHint').textContent = `Bei ${n} Spielern sind maximal ${n} Stationen möglich. ` +
                                 `Gerade Stationen = schreiben, ungerade = zeichnen.`;
-    $('lobbyPlayers').innerHTML = Object.keys(state.players).map(nm => {
-      const av = avatarFor(nm);
-      return `<div class="lp">${av?`<img src="${av}">`:''}<span>${nm}</span>
-        ${state.hostName===nm?'<span class="host">LEADER</span>':''}</div>`;
-    }).join('');
+    garticLobbyListe.render(Object.keys(state.players));
     return;
   }
 
