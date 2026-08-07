@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
 <script src="./categories.js"></script>
 <script src="../avatare.js"></script>
 <style>
@@ -465,32 +466,53 @@ function render(){
     box.innerHTML = '<div class="leer">Noch keine Spieler.</div>';
     return;
   }
-  box.innerHTML = state.players.map(p=>{
-    const tot = p.lives <= 0;
-    const dran = p.name === state.turnName && !tot;
-    const hearts = Array.from({length:START_LEBEN},(_, i)=>heartSvg(i < p.lives)).join('');
-    return `<div class="prow ${dran?'dran':''} ${tot?'tot':''}">
+
+  spielerListe.render(state.players);
+}
+
+// Spieler-Zeilen ruhig verwalten: Avatar-<img> wird nur beim ersten
+// Anlegen erzeugt, danach aendern sich nur Herzen/Klassen/Buttons -
+// kein Neuladen der Bilder bei jedem Realtime-Tick mehr.
+const spielerListe = KernRender.liste(document.getElementById('players'), {
+  schluessel: p => p.name,
+  erstellen: p => {
+    const el = document.createElement('div');
+    el.className = 'prow';
+    el.innerHTML = `
       ${avatarBild(p.name)}
-      <span class="nm">${p.name}</span>
-      <span class="hearts">${hearts}</span>
+      <span class="nm"></span>
+      <span class="hearts"></span>
       <span class="actions">
-        <button class="mini rf-ok" data-ok="${p.name}" ${tot?'disabled':''}>✓ Richtig</button>
-        <button class="mini rf-no" data-no="${p.name}" ${tot?'disabled':''}>✗ Falsch</button>
+        <button class="mini rf-ok" data-ok="${p.name}">✓ Richtig</button>
+        <button class="mini rf-no" data-no="${p.name}">✗ Falsch</button>
         <button class="mini" data-minus="${p.name}">−</button>
         <button class="mini" data-plus="${p.name}">+</button>
         <button class="mini dran-btn" data-dran="${p.name}">Dran</button>
         <button class="mini" data-del="${p.name}">✕</button>
-      </span>
-    </div>`;
-  }).join('');
-
-  box.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>antwortRichtig(b.dataset.ok));
-  box.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>antwortFalsch(b.dataset.no));
-  box.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>lebenAendern(b.dataset.minus,-1));
-  box.querySelectorAll('[data-plus]').forEach(b=>b.onclick=()=>lebenAendern(b.dataset.plus,1));
-  box.querySelectorAll('[data-dran]').forEach(b=>b.onclick=()=>setzeDran(b.dataset.dran));
-  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>entfernen(b.dataset.del));
-}
+      </span>`;
+    el.querySelector('[data-ok]').onclick = () => antwortRichtig(p.name);
+    el.querySelector('[data-no]').onclick = () => antwortFalsch(p.name);
+    el.querySelector('[data-minus]').onclick = () => lebenAendern(p.name, -1);
+    el.querySelector('[data-plus]').onclick = () => lebenAendern(p.name, 1);
+    el.querySelector('[data-dran]').onclick = () => setzeDran(p.name);
+    el.querySelector('[data-del]').onclick = () => entfernen(p.name);
+    return el;
+  },
+  aktualisieren: (el, p) => {
+    const tot = p.lives <= 0;
+    const dran = p.name === state.turnName && !tot;
+    el.className = `prow ${dran ? 'dran' : ''} ${tot ? 'tot' : ''}`;
+    KernRender.textWennGeaendert(el.querySelector('.nm'), p.name);
+    const heartsHtml = Array.from({length: START_LEBEN}, (_, i) => heartSvg(i < p.lives)).join('');
+    const heartsEl = el.querySelector('.hearts');
+    if(heartsEl.dataset.leben !== String(p.lives)){
+      heartsEl.innerHTML = heartsHtml;
+      heartsEl.dataset.leben = String(p.lives);
+    }
+    el.querySelector('[data-ok]').disabled = tot;
+    el.querySelector('[data-no]').disabled = tot;
+  }
+});
 
 fuelleKategorien();
 ladeState();
