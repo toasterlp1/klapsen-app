@@ -11,6 +11,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script src="./raetsel.js"></script>
 <style>
@@ -114,7 +115,9 @@
       <button class="btn-ghost" id="btnResetPool">Pool zurücksetzen</button>
     </div>
     <h2 style="margin-top:20px;">Buzzer-Warteschlange</h2>
-    <div class="queue" id="queue"><span style="color:var(--muted);">— niemand gebuzzert —</span></div>
+    <div class="queue" id="queue">
+      <span id="queueLeer" style="color:var(--muted);">— niemand gebuzzert —</span>
+    </div>
     <div class="row" style="margin-top:14px;">
       <button class="btn-primary" id="btnCorrect" disabled>Richtig</button>
       <button class="btn-bad" id="btnWrong" disabled>Falsch</button>
@@ -143,6 +146,24 @@ let state = { players:{}, riddleIndex:null, revealedCount:0, solved:false, buzzQ
               revealAt:null, timerRunning:false };
 
 const REVEAL_SEKUNDEN = 12;
+
+// Buzz-Warteschlange ruhig verwalten - Eintraege bleiben im DOM
+// bestehen, nur Klassen/Text aendern sich (kein Neuaufbau bei
+// jedem Realtime-Tick).
+const queueListe = KernRender.liste(document.getElementById('queue'), {
+  schluessel: n => n,
+  erstellen: () => {
+    const el = document.createElement('div');
+    el.className = 'queue-item';
+    return el;
+  },
+  aktualisieren: (el, name) => {
+    const out = state.buzzedOut.includes(name);
+    const isActive = state.buzzQueue.find(n => !state.buzzedOut.includes(n)) === name;
+    el.className = `queue-item ${isActive ? 'active' : ''} ${out ? 'out' : ''}`;
+    KernRender.textWennGeaendert(el, name + (isActive ? ' ← dran' : ''));
+  }
+});
 
 async function loadState(){
   const { data } = await sb.from('er_state').select('state').eq('id',1).single();
@@ -186,17 +207,9 @@ function render(){
 
   document.getElementById('btnReveal').disabled = state.riddleIndex==null || state.solved || state.revealedCount>=4;
 
-  const queueEl = document.getElementById('queue');
-  if(state.buzzQueue.length===0){
-    queueEl.innerHTML = '<span style="color:var(--muted);">— niemand gebuzzert —</span>';
-  } else {
-    const active = activeBuzzer();
-    queueEl.innerHTML = state.buzzQueue.map(n=>{
-      const out = state.buzzedOut.includes(n);
-      const isActive = n===active;
-      return `<div class="queue-item ${isActive?'active':''} ${out?'out':''}">${n}${isActive?' ← dran':''}</div>`;
-    }).join('');
-  }
+  const queueLeer = document.getElementById('queueLeer');
+  queueLeer.style.display = state.buzzQueue.length===0 ? '' : 'none';
+  queueListe.render(state.buzzQueue);
 
   const active = activeBuzzer();
   document.getElementById('btnCorrect').disabled = !active || state.solved || state.riddleIndex==null;
