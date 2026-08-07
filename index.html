@@ -107,6 +107,52 @@
     gap: 14px;
   }
 
+  /* ---------- Lobby-Eingang: der Haupteingang, deutlich abgehoben
+     von den einzelnen Format-Kacheln ---------- */
+  .lobby-eingang {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 34px;
+    padding: 26px 30px;
+    border-radius: 18px;
+    text-decoration: none;
+    color: var(--text);
+    background:
+      linear-gradient(120deg, rgba(61,220,132,.16) 0%, rgba(77,159,255,.10) 100%),
+      var(--bg-card);
+    border: 1px solid rgba(61,220,132,.4);
+    box-shadow: 0 0 0 1px rgba(61,220,132,.08), 0 20px 50px -24px rgba(61,220,132,.35);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .lobby-eingang:hover, .lobby-eingang:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(61,220,132,.7);
+    box-shadow: 0 0 0 1px rgba(61,220,132,.15), 0 26px 60px -22px rgba(61,220,132,.5);
+  }
+  .lobby-eingang-label {
+    font-size: .72rem; letter-spacing: 2.5px; text-transform: uppercase;
+    color: #3ddc84; font-weight: 800; margin-bottom: 6px;
+  }
+  .lobby-eingang-titel {
+    font-family: 'Anton', sans-serif; font-size: 1.9rem; letter-spacing: .5px;
+    margin-bottom: 6px;
+  }
+  .lobby-eingang-text {
+    color: var(--text-dim); font-size: .92rem; max-width: 480px;
+  }
+  .lobby-eingang-pfeil {
+    font-size: 1.8rem; color: #3ddc84; flex-shrink: 0;
+    transition: transform .18s ease;
+  }
+  .lobby-eingang:hover .lobby-eingang-pfeil { transform: translateX(6px); }
+
+  @media (max-width: 560px) {
+    .lobby-eingang { flex-direction: column; align-items: flex-start; text-align: left; }
+    .lobby-eingang-pfeil { display: none; }
+  }
+
   .tile {
     display: block;
     background: var(--bg-card);
@@ -197,6 +243,15 @@
 
 <main>
 
+  <a class="lobby-eingang" href="turnier/">
+    <div class="lobby-eingang-inhalt">
+      <div class="lobby-eingang-label">Los geht's</div>
+      <div class="lobby-eingang-titel">Lobby beitreten</div>
+      <div class="lobby-eingang-text">Alle treten hier bei — Format waehlen, alle werden automatisch reingezogen.</div>
+    </div>
+    <div class="lobby-eingang-pfeil">→</div>
+  </a>
+
   <div class="section-label">Quiz-Formate</div>
   <div class="grid">
     <a class="tile" href="quizduell/" style="--tile-color:#ff4d4d;">
@@ -247,9 +302,6 @@
     </a>
     <a class="tile" href="stadtlandfluss/" style="--tile-color:#38e1b0;">
       <div class="tile-name">Stadt-Land-Fluss</div>
-    </a>
-    <a class="tile" href="turnier/" style="--tile-color:#3ddc84;">
-      <div class="tile-name">Turnier</div>
     </a>
     <a class="tile" href="bestenliste/" style="--tile-color:#f5c542;">
       <div class="tile-name">Bestenliste</div>
