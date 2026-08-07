@@ -12,6 +12,8 @@
 <script src="../turnier.js"></script>
 <script src="./morphs.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
+<script src="../kern-turn.js"></script>
 <script src="../host-podest.js"></script>
 <script src="../symbole.js"></script>
 <style>
@@ -235,7 +237,8 @@
 </style>
 <link rel="stylesheet" href="../responsive.css" />
 <link rel="stylesheet" href="../hintergrund-host.css" />
-<style>:root{ --akzent-rgb: 196,77,255; --akzent2-rgb: 60,180,230; }</style>
+<link rel="stylesheet" href="../kern-turn.css" />
+<style>:root{ --akzent-rgb: 196,77,255; --akzent2-rgb: 60,180,230; --kern-akzent: 196,77,255; --kern-akzent2: 60,180,230; }</style>
 </head>
 <body class="host">
 <div class="stage">
@@ -258,10 +261,7 @@
 
   <div class="buzz-side">
     <div class="buzz-orb">BUZZER</div>
-    <div class="buzz-order">
-      <div class="head">Buzz Order</div>
-      <div class="list" id="buzzOrderList"><span class="leer">—</span></div>
-    </div>
+    <div id="kernBuzzListeSlot"></div>
   </div>
 
   <div class="only-one" id="onlyOne">LAST CHANCE</div>
@@ -328,6 +328,7 @@ let fxVorherigeBuzzedOut = [];
 let fxLetzteLoesung = null;
 let currentIndex = null;
 let state = null;
+const kernBuzzListe = KernTurn.buzzListe(document.getElementById('kernBuzzListeSlot'), { titel: 'BUZZ ORDER' });
 
 function currentPoints(elapsed){
   const t = Math.max(0, Math.min(1, elapsed / PUNKTE_DAUER_MS));
@@ -415,17 +416,7 @@ function render(){
   const roundEl = document.getElementById('roundCounter');
   if(roundEl) roundEl.textContent = Math.min(Math.max(revealStep,1),2) + '/2';
 
-  const orderList = document.getElementById('buzzOrderList');
-  if(orderList){
-    const offen = buzzQueue.filter(n => !buzzedOut.includes(n));
-    orderList.innerHTML = buzzQueue.length
-      ? buzzQueue.map((n,i)=>{
-          const raus = buzzedOut.includes(n);
-          return `<div class="row" style="${raus?'opacity:.35;text-decoration:line-through;':''}">`
-               + `<span class="idx">${i+1}</span><span>${n}</span></div>`;
-        }).join('')
-      : '<span class="leer">—</span>';
-  }
+  kernBuzzListe.aktualisieren(buzzQueue, buzzQueue.find(n => !buzzedOut.includes(n)), buzzedOut);
 }
 
 function tick(){
