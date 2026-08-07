@@ -11,6 +11,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-korrektur.js"></script>
 <script src="./questions.js"></script>
 <style>
   :root{
@@ -90,6 +91,7 @@
 }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-korrektur.css" />
 </head>
 <body>
 <h1>CHATDUELL — SPIELLEITER</h1>
@@ -204,6 +206,8 @@
 
     <h2 style="margin-top:20px;">Antworten — nur für dich sichtbar</h2>
     <div class="answers-board" id="answersBoard"></div>
+
+    <div id="korrekturPanel"></div>
   </div>
 
 </div>
@@ -254,6 +258,19 @@ async function loadState(){
   state = Object.assign(JSON.parse(JSON.stringify(defaultState)), data?.state||{});
   render();
 }
+
+// Freier Eingriff: Team-Punkte manuell korrigieren. ChatDuell hat
+// keinen Timer, deshalb nur die Punkte-Zeile.
+KernKorrektur.einbauen({
+  container: document.getElementById('korrekturPanel'),
+  spieler: () => ['Team A', 'Team B'],
+  aufPunkteAendern: async (name, delta) => {
+    const key = name === 'Team A' ? 'teamA' : 'teamB';
+    state[key].score = Math.max(0, (state[key].score || 0) + delta);
+    await saveState();
+  }
+});
+
 async function saveState(){
   await sb.from('cd_state').update({ state }).eq('id',1);
 }
@@ -568,14 +585,18 @@ async function stealErfolg(antwortIndex){
   if(state.phase !== 'steal' || state.stealUsed) return;
   state.stealUsed = true;
 
-  // Die genannte Antwort aufdecken - sichtbar machen, dass sie
-  // getroffen wurde. Der Pot bleibt wie er ist: das stehlende
-  // Team bekommt die Punkte der Runde, nicht mehr.
+  // Die genannte Antwort aufdecken UND ihren Punktwert zum Pot
+  // dazuzaehlen - genau das war der Fehler: die gestohlene Antwort
+  // selbst floss nie in den Pot ein. Beispiel: Team A hat 3 von 5
+  // Antworten aufgedeckt (Pot = Summe dieser 3), scheitert, Team B
+  // nennt die 4. Antwort -> Team B muss die Punkte ALLER VIER
+  // aufgedeckten Antworten bekommen, nicht nur der ersten drei.
   if(typeof antwortIndex === 'number'){
     const a = state.answers[antwortIndex];
     if(a && !a.revealed){
       a.revealed = true;
       a.team = state.stealTeam;
+      state.pot += a.punkte;
     }
   }
 
