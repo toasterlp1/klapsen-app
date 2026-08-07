@@ -11,6 +11,7 @@
 <script src="../auth.js"></script>
 <script src="../avatare.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
 <script src="../symbole.js"></script>
 <script src="woerter.js"></script>
 <style>
@@ -296,6 +297,38 @@ const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY
 
 let myName = localStorage.getItem('skr_name') || '';
 let state = null;
+
+// Spieler-Kacheln (mit Avatar) ruhig verwalten - Bilder werden nur
+// beim ersten Anlegen geladen, danach aendern sich nur Klassen/Text.
+const skribblSpielerListe = KernRender.liste(document.getElementById('playersCol'), {
+  schluessel: ([n]) => n,
+  erstellen: ([n]) => {
+    const av = avatarFor(n);
+    const el = document.createElement('div');
+    el.innerHTML = `
+      <span class="ka-badge-tr" style="right:auto;left:-8px;top:-8px;display:none;"></span>
+      ${av ? `<img src="${av}" alt="">` : ''}
+      <span class="nm"></span>
+      <span class="sc"></span>`;
+    return el;
+  },
+  aktualisieren: (el, [n, p]) => {
+    const zeichnet = state.zeichner === n;
+    const richtig = !!p.guessedAt;
+    const cls = ['p'];
+    if(zeichnet) cls.push('drawing');
+    else if(richtig) cls.push('guessed');
+    el.className = cls.join(' ');
+    const badge = el.querySelector('.ka-badge-tr');
+    if(badge){
+      badge.style.display = zeichnet ? '' : 'none';
+      if(zeichnet && !badge.innerHTML) badge.innerHTML = KA.star();
+    }
+    KernRender.textWennGeaendert(el.querySelector('.nm'), n);
+    KernRender.textWennGeaendert(el.querySelector('.sc'), p.score);
+  },
+  sortieren: ([,a],[,b]) => b.score - a.score
+});
 let letzteStrichId = 0;
 let lastPhase = null;
 let lastTurnKey = null;
@@ -934,22 +967,7 @@ function render(){
                   : habRichtig ? 'Richtig! Warte auf die anderen…'
                   : 'Deine Antwort…';
 
-  $('playersCol').innerHTML = Object.entries(state.players)
-    .sort((a,b) => b[1].score - a[1].score)
-    .map(([n, p]) => {
-      const av = avatarFor(n);
-      const zeichnet = state.zeichner === n;
-      const richtig = !!p.guessedAt;
-      const cls = ['p'];
-      if(zeichnet) cls.push('drawing');
-      else if(richtig) cls.push('guessed');
-      return `<div class="${cls.join(' ')}">
-        ${zeichnet ? `<span class="ka-badge-tr" style="right:auto;left:-8px;top:-8px;">${KA.star()}</span>` : ''}
-        ${av ? `<img src="${av}" alt="">` : ''}
-        <span class="nm">${n}</span>
-        <span class="sc">${p.score}</span>
-      </div>`;
-    }).join('');
+  skribblSpielerListe.render(Object.entries(state.players));
 
   const chatEl = $('chat');
   chatEl.innerHTML = (state.chat || []).map(m => {
