@@ -79,6 +79,16 @@
     <label>Abgegebene Ausreden</label>
     <div id="liste"><div class="status">Noch keine Runde.</div></div>
   </div>
+
+  <div class="box" style="margin-top:20px;">
+    <label>Neustart</label>
+    <div class="reihe">
+      <button class="sek" id="btnReset" style="border-color:#e11d48;color:#fb7185;">Spielstand komplett zurücksetzen</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted,#8891a8);margin-top:8px;">
+      Löscht alle bisherigen Runden und die Gesamtpunkte für Ausredenkönig. Andere Formate sind davon nicht betroffen.
+    </div>
+  </div>
 </div>
 
 <script>
@@ -262,6 +272,20 @@ window.arZaehler = {
   gespielt: parseInt(localStorage.getItem('ar_gespielt')||'0',10),
   rundenZiel: parseInt(localStorage.getItem('ar_ziel')||'10',10),
   rundenFertig: false
+};
+
+// Kompletter Neustart: alte Runden (Ausreden/Stimmen kaskadieren mit)
+// und die Gesamtpunkte fuer dieses Format loeschen.
+document.getElementById('btnReset').onclick = async () => {
+  if(!confirm('Spielstand wirklich komplett zurücksetzen?\nAlle bisherigen Runden und die Gesamtpunkte für Ausredenkönig werden gelöscht.')) return;
+  const btn = document.getElementById('btnReset');
+  btn.disabled = true; btn.textContent = 'Setze zurück…';
+  await sb.from('ausreden_runden').delete().neq('id', 0);
+  await sb.from('ergebnisse').delete().eq('format', 'ausreden');
+  window.arZaehler ? (window.arZaehler.gespielt = 0) : null;
+  localStorage.setItem('ar_gespielt', '0');
+  btn.textContent = 'Zurückgesetzt ✓';
+  setTimeout(() => { btn.textContent = 'Spielstand komplett zurücksetzen'; btn.disabled = false; }, 2000);
 };
 
 RUNDEN.init({
