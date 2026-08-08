@@ -261,17 +261,28 @@ function render(){
     q ? q.frage : 'Spiel noch nicht gestartet.';
 
   const opts = document.getElementById('opts');
-  opts.innerHTML = !q ? '' : q.antworten.map((txt,i) => {
-    const waehler = Object.entries(state.answers).filter(([,a]) => a === i).map(([n]) => n);
-    const imgs = waehler.map(n => {
-      const av = avatarFor(n);
-      return av ? `<img src="${av}" title="${n}" alt="${n}">` : '';
-    }).join('');
-    return `<div class="opt ${i===q.richtig?'right':''}">
-      <span class="l">${LETTERS[i]}</span><span>${txt}</span>
-      <span class="who">${imgs}</span>
-    </div>`;
-  }).join('');
+  if(!q){
+    opts.innerHTML = '';
+  } else {
+    // Nur neu bauen, wenn sich Frage oder Waehler wirklich geaendert
+    // haben - sonst wuerden die Waehler-Avatare bei jedem Tick neu
+    // laden, obwohl sich nichts aendert.
+    const signatur = state.qIndex + '|' + JSON.stringify(state.answers);
+    if(opts.dataset.sig !== signatur){
+      opts.dataset.sig = signatur;
+      opts.innerHTML = q.antworten.map((txt,i) => {
+        const waehler = Object.entries(state.answers).filter(([,a]) => a === i).map(([n]) => n);
+        const imgs = waehler.map(n => {
+          const av = avatarFor(n);
+          return av ? `<img src="${av}" title="${n}" alt="${n}">` : '';
+        }).join('');
+        return `<div class="opt ${i===q.richtig?'right':''}">
+          <span class="l">${LETTERS[i]}</span><span>${txt}</span>
+          <span class="who">${imgs}</span>
+        </div>`;
+      }).join('');
+    }
+  }
 
   const jn = document.getElementById('jokerNote');
   if(state.usedJoker){
