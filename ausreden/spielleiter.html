@@ -11,6 +11,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-korrektur.js"></script>
 <script src="../avatare.js"></script>
 <script src="../runden.js"></script>
 <script src="situationen.js"></script>
@@ -48,6 +49,7 @@
   .sieg{color:var(--gold);font-weight:800;}
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-korrektur.css" />
 </head>
 <body>
 
@@ -89,6 +91,11 @@
       Löscht alle bisherigen Runden und die Gesamtpunkte für Ausredenkönig. Andere Formate sind davon nicht betroffen.
     </div>
   </div>
+
+  <div class="box">
+    <label>Manuelle Korrektur</label>
+    <div id="korrekturPanel"></div>
+  </div>
 </div>
 
 <script>
@@ -98,6 +105,18 @@ let runde = null;
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const crew = () => (typeof AVATARE !== 'undefined') ? Object.keys(AVATARE) : [];
+
+// Freier Eingriff: schreibt einen manuellen Korrektur-Eintrag in
+// dieselbe 'ergebnisse'-Tabelle, aus der auch die normale
+// Punktevergabe kommt - fliesst automatisch korrekt in die
+// Gesamtsumme auf der Host-Seite ein.
+KernKorrektur.einbauen({
+  container: document.getElementById('korrekturPanel'),
+  spieler: () => crew(),
+  aufPunkteAendern: async (name, delta) => {
+    await sb.from('ergebnisse').insert({ format: 'ausreden', spieler: name, punkte: delta });
+  }
+});
 let autoLaeuft = false;
 
 document.getElementById('btnZufall').onclick = () => {
