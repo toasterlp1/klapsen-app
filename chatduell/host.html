@@ -11,6 +11,7 @@
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
 <script src="../host-fx.js"></script>
 <script src="../symbole.js"></script>
 <style>
@@ -486,6 +487,32 @@ function renderHearts(elId, lives, prevLives, active){
   el.innerHTML = html;
 }
 
+// Team-Spieler-Chips ruhig verwalten (je Team eine eigene Liste) -
+// kein Neuaufbau bei jedem Realtime-Tick, Avatare werden nur beim
+// ersten Anlegen geladen statt bei jedem Tick neu.
+const cdTeamListen = {};
+['A','B'].forEach(team=>{
+  cdTeamListen[team] = KernRender.liste(document.getElementById('players'+team), {
+    schluessel: p => p.name,
+    erstellen: p => {
+      const avatarUrl = avatarFor(p.name);
+      const el = document.createElement('div');
+      el.style.position = 'relative';
+      el.innerHTML = `
+        <span class="ka-badge-tr" style="display:none;"></span>
+        ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}">` : ''}
+        ${p.name}`;
+      return el;
+    },
+    aktualisieren: (el, p) => {
+      el.className = `player-chip ${p.__active ? 'active ka-live-green' : ''}`;
+      const badge = el.querySelector('.ka-badge-tr');
+      badge.style.display = p.__active ? '' : 'none';
+      if(p.__active && !badge.innerHTML) badge.innerHTML = KA.mic();
+    }
+  });
+});
+
 function render(){
   if(!state) return;
   const {
@@ -568,17 +595,12 @@ function render(){
   }
 
   ['A','B'].forEach(team=>{
-    const el = document.getElementById('players'+team);
     const names = Object.entries(players).filter(([n,p])=>p.team===team).map(([n])=>n);
     const wholeTeamMic = phase==='playing' && controllingTeam===team && controlLives<=1;
-    el.innerHTML = names.map(name=>{
-      const isActive = wholeTeamMic || name===activePlayer;
-      const avatarUrl = avatarFor(name);
-return `<div class="player-chip ${isActive?'active ka-live-green':''}" style="position:relative;">
-  ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}">` : ''}
-  ${isActive ? `<span class="ka-badge-tr">${KA.mic()}</span>` : ''}${name}
-</div>`;
-    }).join('');
+    const datensaetze = names.map(name => ({
+      name, __active: wholeTeamMic || name===activePlayer
+    }));
+    cdTeamListen[team].render(datensaetze);
   });
 
   const questionText = document.getElementById('questionText');
