@@ -245,6 +245,16 @@ async function loadState(){
   const { data } = await sb.from('hz_state').select('state').eq('id',1).single();
   state = data?.state || state;
   populateSelect();
+
+  // Selbstheilung: Der Name ist lokal gespeichert (schon mal beigetreten),
+  // steht aber nicht mehr in state.players - z.B. weil der Spielleiter
+  // zurueckgesetzt hat. Ohne diesen Eintrag haengt render() fuer immer,
+  // weil es sofort abbricht, wenn state.players[myName] fehlt.
+  if(myName && state.players && !state.players[myName]){
+    state.players[myName] = { team:'blue', ready:false };
+    await sb.from('hz_state').update({ state }).eq('id',1);
+  }
+
   if(myName && gameView.style.display==='none') showGame();
   render();
 }
