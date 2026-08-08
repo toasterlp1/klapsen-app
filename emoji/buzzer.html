@@ -62,23 +62,7 @@
     box-shadow:0 6px 20px -6px rgba(199,107,255,.55);transition:transform .12s var(--ease);
   }
   button.join:active{transform:scale(.97);}
-
-  .buzz-btn{
-    width:250px;height:250px;border-radius:50%;border:none;
-    background:radial-gradient(circle at 35% 30%, #ff5470, var(--bad));
-    box-shadow:0 0 50px rgba(255,56,96,.5);
-    color:#fff;font-family:'Anton',sans-serif;font-size:38px;letter-spacing:2px;
-    cursor:pointer;transition:transform .12s var(--ease), box-shadow .3s var(--ease), background .3s var(--ease);
-    animation:buzzReady 2s ease-in-out infinite;
-  }
-  @keyframes buzzReady{
-    0%,100%{box-shadow:0 0 50px rgba(255,56,96,.5);}
-    50%{box-shadow:0 0 70px rgba(255,56,96,.75);}
-  }
-  .buzz-btn:active{transform:scale(.94);}
-  .buzz-btn:disabled{
-    background:var(--panel);box-shadow:none;color:var(--muted);cursor:not-allowed;animation:none;
-  }
+  /* Buzz-Knopf-Optik kommt aus kern-turn.css (.kern-buzzer-btn) */
   .status{
     margin-top:24px;font-size:14.5px;color:var(--muted);line-height:1.6;
     background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 18px;
@@ -88,6 +72,8 @@
   .active{color:var(--gold);font-weight:800;}
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-turn.css" />
+<style>:root{ --kern-akzent: 255,56,96; }</style>
 </head>
 <body>
 <div class="wrap" id="joinView">
@@ -101,7 +87,7 @@
   <h1 class="brand">EMOJI-RÄTSEL</h1>
   <div class="brand-rule"></div>
   <div id="greeting"></div>
-  <button class="buzz-btn" id="buzzBtn">BUZZ</button>
+  <button class="kern-buzzer-btn gesperrt" id="buzzBtn">BUZZ</button>
   <div class="status" id="status">Warte auf Rätsel…</div>
 </div>
 
@@ -181,6 +167,8 @@ function render(){
   const canBuzz = hasRiddle && !state.solved && !alreadyBuzzed;
 
   buzzBtn.disabled = !canBuzz;
+  buzzBtn.classList.toggle('bereit', canBuzz);
+  buzzBtn.classList.toggle('gesperrt', !canBuzz);
   if(!hasRiddle){
     statusEl.innerHTML = 'Warte auf Rätsel…';
   } else if(state.solved){
@@ -199,6 +187,10 @@ function render(){
 
 async function doBuzz(){
   if(buzzBtn.disabled) return;
+
+  buzzBtn.classList.remove('gedrueckt');
+  void buzzBtn.offsetWidth;
+  buzzBtn.classList.add('gedrueckt');
 
   // Vorpruefung im Browser: spart einen Aufruf, wenn ohnehin nichts geht
   const { data, error: leseFehler } = await sb.from('er_state').select('state').eq('id', 1).single();
