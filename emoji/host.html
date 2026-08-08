@@ -14,6 +14,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script src="./raetsel.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
+<script src="../kern-turn.js"></script>
 <script src="../host-podest.js"></script>
 <script src="../symbole.js"></script>
 <style>
@@ -237,7 +239,8 @@
 </style>
 <link rel="stylesheet" href="../responsive.css" />
 <link rel="stylesheet" href="../hintergrund-host.css" />
-<style>:root{ --akzent-rgb: 199,107,255; --akzent2-rgb: 60,140,240; }</style>
+<link rel="stylesheet" href="../kern-turn.css" />
+<style>:root{ --akzent-rgb: 199,107,255; --akzent2-rgb: 60,140,240; --kern-akzent: 199,107,255; --kern-akzent2: 60,140,240; }</style>
 </head>
 <body class="host">
 <div class="orbs" aria-hidden="true"><span class="o1"></span><span class="o2"></span><span class="o3"></span></div>
@@ -253,10 +256,7 @@
 
   <div class="buzz-side">
     <div class="buzz-orb">BUZZER</div>
-    <div class="buzz-order">
-      <div class="head">Buzz Order</div>
-      <div class="list" id="buzzOrderList"><span class="leer">—</span></div>
-    </div>
+    <div id="kernBuzzListeSlot"></div>
   </div>
   <div class="board" id="board"></div>
   <div class="points-badge" id="pointsBadge" style="display:none;"></div>
@@ -335,6 +335,7 @@ const scoreboardEl = document.getElementById('scoreboard');
 let letzteScores = {};
 
 let state = null;
+const kernBuzzListe = KernTurn.buzzListe(document.getElementById('kernBuzzListeSlot'), { titel: 'BUZZ ORDER' });
 animateBar();
 let lastRevealedCount = 0;
 let lastRiddleIndex = null;
@@ -425,16 +426,7 @@ function render(){
   activeBuzzerEl.textContent = active && !solved ? active + ' ist dran!' : '';
   activeBuzzerEl.classList.toggle('show', !!(active && !solved));
 
-  const orderList = document.getElementById('buzzOrderList');
-  if(orderList){
-    orderList.innerHTML = buzzQueue.length
-      ? buzzQueue.map((n,i)=>{
-          const raus = buzzedOut.includes(n);
-          return `<div class="row" style="${raus?'opacity:.35;text-decoration:line-through;':''}">`
-               + `<span class="idx">${i+1}</span><span>${n}</span></div>`;
-        }).join('')
-      : '<span class="leer">—</span>';
-  }
+  kernBuzzListe.aktualisieren(buzzQueue, buzzQueue.find(n => !buzzedOut.includes(n)), buzzedOut);
   const roundEl = document.getElementById('roundCounter');
   if(roundEl) roundEl.textContent = (state.usedIndices || []).length || (riddleIndex!=null ? 1 : 0);
 
