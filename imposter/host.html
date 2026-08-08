@@ -12,6 +12,7 @@
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
 <script src="../host-podest.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
@@ -180,6 +181,27 @@ function tensionKlasse(phase, crewWin){
   return '';
 }
 
+const impScoreboardListe = KernRender.liste(document.getElementById('scoreboard'), {
+  schluessel: p => p.name,
+  erstellen: p => {
+    const avatarUrl = avatarFor(p.name);
+    const el = document.createElement('div');
+    el.className = 'player-card';
+    el.innerHTML = `
+      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:8px;">` : ''}
+      <div class="name"></div>
+      <div class="score"></div>
+      <div class="tag">Punkte</div>`;
+    return el;
+  },
+  aktualisieren: (el, p, i) => {
+    el.style.setProperty('--i', i);
+    el.className = `player-card ${p.__ejected ? 'ejected' : ''}`;
+    KernRender.textWennGeaendert(el.querySelector('.name'), p.name);
+    KernRender.textWennGeaendert(el.querySelector('.score'), p.score);
+  }
+});
+
 function render(){
   if(window.HOSTPODEST && state) HOSTPODEST.pruefe(state);
   if(!state) return;
@@ -226,19 +248,10 @@ function render(){
     resultBanner.style.display='none';
   }
 
-  const scoreboardEl = document.getElementById('scoreboard');
-  scoreboardEl.innerHTML = Object.entries(players).map(([name,score],i)=>{
-    const avatarUrl = avatarFor(name);
-    const isEjected = (name === ejected && (phase==='guess' || phase==='resolved'));
-    return `
-    <div class="player-card ${isEjected?'ejected':''}" style="--i:${i}">
-      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:8px;">` : ''}
-      <div class="name">${name}</div>
-      <div class="score">${score}</div>
-      <div class="tag">Punkte</div>
-    </div>
-  `;
-  }).join('');
+  const datensaetze = Object.entries(players).map(([name,score]) => ({
+    name, score, __ejected: (name === ejected && (phase==='guess' || phase==='resolved'))
+  }));
+  impScoreboardListe.render(datensaetze);
 }
 
 async function loadState(){
