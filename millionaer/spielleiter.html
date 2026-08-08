@@ -11,6 +11,7 @@
 <script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
 <script src="questions.js"></script>
+<script src="../kern-korrektur.js"></script>
 <style>
   :root{
     --bg:#0a0e1a; --panel:#12172a; --panel-border:#232b45;
@@ -97,6 +98,7 @@
   }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-korrektur.css" />
 </head>
 <body>
 
@@ -131,6 +133,7 @@
       Punkte werden beim <b>Auflösen</b> automatisch verrechnet.<br>
       Richtig: volle Punkte · Falsch: keine · <b>Risk</b>: doppelt bzw. Minus.
     </div>
+    <div id="korrekturPanel"></div>
   </div>
 
 </div>
@@ -335,6 +338,25 @@ function render(){
   document.getElementById('btnPrev').disabled = (state.qIndex == null || state.qIndex === 0);
   document.getElementById('btnNext').textContent =
     (state.qIndex == null) ? 'Spiel starten' : 'Nächste Frage';
+
+  // Freier Eingriff: Punkte manuell korrigieren. Panel nur neu bauen,
+  // wenn sich die Spielerliste wirklich geaendert hat - sonst wuerde
+  // es bei jedem Render wieder einklappen und Handler neu anhaengen.
+  const spielerNamen = Object.keys(state.players || {});
+  const signatur = spielerNamen.join(',');
+  if(signatur !== window.__korrekturSig){
+    window.__korrekturSig = signatur;
+    KernKorrektur.einbauen({
+      container: document.getElementById('korrekturPanel'),
+      spieler: () => spielerNamen,
+      aufPunkteAendern: async (name, delta) => {
+        const s = await load();
+        if(!s || !s.players[name]) return;
+        s.players[name].score = (s.players[name].score || 0) + delta;
+        await save(s);
+      }
+    });
+  }
 }
 
 document.getElementById('btnNext').onclick = nextQ;
