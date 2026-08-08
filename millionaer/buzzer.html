@@ -445,7 +445,23 @@ function render(){
   }
 }
 
-async function tick(){ const s = await load(); if(!s) return; render(); }
+async function tick(){
+  const s = await load();
+  if(!s) return;
+
+  // Selbstheilung: Der Name ist lokal gespeichert (man hat schon
+  // einmal beigetreten), steht aber nicht mehr in state.players -
+  // z.B. weil der Spielleiter "Reset" gedrueckt hat. Ohne diesen
+  // Eintrag haengt die Seite fuer immer bei "Warte auf die erste
+  // Frage...", weil render() sofort abbricht. Also automatisch
+  // neu eintragen statt stumm zu haengen.
+  if(myName && s.players[myName] == null){
+    s.players[myName] = { score:0, jokers:{ '5050':true, 'spy':true, 'risk':true } };
+    await save(s);
+  }
+
+  render();
+}
 tick();
 setInterval(tick, 1500);
 sb.channel('wwm_buzz')
