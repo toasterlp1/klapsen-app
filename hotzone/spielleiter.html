@@ -10,6 +10,8 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-render.js"></script>
+<script src="../kern-korrektur.js"></script>
 <script src="../avatare.js"></script>
 <script src="../live.js"></script>
 <script src="./categories.js"></script>
@@ -71,6 +73,7 @@
   }
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-korrektur.css" />
 </head>
 <body>
 <h1>HOTZONE — SPIELLEITER</h1>
@@ -116,11 +119,14 @@
 
   <div class="card full">
     <h2>Spieler</h2>
-    <div class="players" id="spielerListe"></div>
+    <div class="players" id="spielerListe">
+      <div class="status-line" id="spielerListeLeer">Noch niemand beigetreten.</div>
+    </div>
     <div class="row" style="margin-top:12px;">
       <button class="btn-ghost mini" id="btnPunkteReset">Punkte zurücksetzen</button>
       <button class="btn-bad mini" id="btnSpielReset">Spiel komplett zurücksetzen</button>
     </div>
+    <div id="korrekturPanel"></div>
   </div>
 
 </div>
@@ -132,6 +138,37 @@ const sb = window.KA_SB || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY
 
 const JOKER_NAMEN = { double:'RISK', reroll:'NEUE FRAGE', grey:'CUT' };
 let state = null;
+
+// Spielerliste ruhig verwalten - kein Neuaufbau bei jedem Render.
+const hzSpielerListe = KernRender.liste(document.getElementById('spielerListe'), {
+  schluessel: ([n]) => n,
+  erstellen: () => {
+    const el = document.createElement('div');
+    el.className = 'player-row';
+    el.innerHTML = `<span class="name"></span><span class="team-tag"></span>`;
+    return el;
+  },
+  aktualisieren: (el, [n, p], i, s) => {
+    const istGeber = state.clueGiver === n;
+    const tag = p.team === 'blue' ? 'Blue' : p.team === 'red' ? 'Red' : 'ohne Team';
+    el.className = 'player-row ' + (istGeber ? 'clue' : '');
+    KernRender.textWennGeaendert(el.querySelector('.name'), n);
+    KernRender.textWennGeaendert(el.querySelector('.team-tag'), tag + (istGeber ? ' · Hinweisgeber' : ''));
+  }
+});
+
+// Freier Eingriff: Team-Punkte manuell korrigieren, zusaetzlich zum
+// kompletten "Punkte zurücksetzen"-Knopf oben.
+KernKorrektur.einbauen({
+  container: document.getElementById('korrekturPanel'),
+  spieler: () => ['Team Blue', 'Team Red'],
+  aufPunkteAendern: async (name, delta) => {
+    if(!state) return;
+    const feld = name === 'Team Blue' ? 'blueScore' : 'redScore';
+    state[feld] = (state[feld] || 0) + delta;
+    await speichere(state);
+  }
+});
 
 /* Punkteregel:
    exakt getroffen ......... 3   (mit Risk: 6)
@@ -315,16 +352,10 @@ function render(){
     }).join('');
   });
 
-  const liste = document.getElementById('spielerListe');
-  const namen = Object.keys(s.players || {});
-  liste.innerHTML = namen.length ? namen.map(function(n){
-    const p = s.players[n];
-    const istGeber = s.clueGiver === n;
-    const tag = p.team === 'blue' ? 'Blue' : p.team === 'red' ? 'Red' : 'ohne Team';
-    return '<div class="player-row ' + (istGeber?'clue':'') + '">' +
-           '<span class="name">' + n + '</span>' +
-           '<span class="team-tag">' + tag + (istGeber?' · Hinweisgeber':'') + '</span></div>';
-  }).join('') : '<div class="status-line">Noch niemand beigetreten.</div>';
+  const leerHint = document.getElementById('spielerListeLeer');
+  const namen = Object.entries(s.players || {});
+  if(leerHint) leerHint.style.display = namen.length ? 'none' : '';
+  hzSpielerListe.render(namen);
 }
 
 function starteLive(){
