@@ -1,9 +1,9 @@
 /* ============================================================
    KERN-TURN.CSS — "X'S TURN" Anzeige + Buzz-Reihenfolge
    ============================================================
-   Sichtbare Bausteine, die Ole explizit wollte: eine Pille die
-   zeigt wer dran ist ("EMOOO'S TURN"), eine sichtbare Liste der
-   Buzz-Reihenfolge, ein Buzzer-Knopf der einlaedt draufzudruecken.
+   Sichtbare Bausteine: eine Pille die zeigt wer dran ist
+   ("EMOOO'S TURN"), eine sichtbare Liste der Buzz-Reihenfolge,
+   ein Buzzer-Knopf der einlaedt draufzudruecken.
 
    Die Akzentfarbe kommt aus --kern-akzent (pro Format gesetzt),
    damit jedes Format seine eigene Farbe behaelt, aber dieselbe
