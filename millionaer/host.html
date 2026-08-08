@@ -11,6 +11,7 @@
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
 <script src="questions.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
@@ -366,6 +367,45 @@ async function load(){
   return state;
 }
 
+const JOKER_ICONS = {
+  '5050':'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
+  'spy':'<svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg>',
+  'risk':'<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3.4" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="15" r="1.6" fill="currentColor"/></svg>'
+};
+
+// Spielerliste ruhig verwalten - kein Neuaufbau bei jedem Render.
+const wwmSpielerListe = KernRender.liste(document.getElementById('players'), {
+  schluessel: p => p.name,
+  erstellen: p => {
+    const av = avatarFor(p.name);
+    const el = document.createElement('div');
+    el.className = 'p';
+    el.innerHTML = `
+      <span class="state"></span>
+      <span class="jks">${['5050','spy','risk'].map(t=>`<span class="j${t}">${JOKER_ICONS[t]}</span>`).join('')}</span>
+      ${av ? `<img src="${av}" alt="">` : ''}
+      <span class="info">
+        <span class="nm"></span>
+        <span class="pts"></span>
+      </span>`;
+    return el;
+  },
+  aktualisieren: (el, p) => {
+    el.className = `p ${p.__cardCls || ''}`;
+    const stateEl = el.querySelector('.state');
+    stateEl.className = `state ${p.__stateCls || ''}`;
+    KernRender.textWennGeaendert(stateEl, p.__stateTxt);
+    ['5050','spy','risk'].forEach(t => {
+      const jEl = el.querySelector('.j'+t);
+      const jetzt = p.__usedJoker && p.__usedJoker.name === p.name && p.__usedJoker.typ === t;
+      const spent = !p.jokers[t] && !jetzt;
+      jEl.className = 'j'+t + (spent?' spent':'') + (jetzt?' now':'');
+    });
+    KernRender.textWennGeaendert(el.querySelector('.nm'), p.name);
+    KernRender.textWennGeaendert(el.querySelector('.pts'), p.score);
+  }
+});
+
 function render(){
   if(!state) return;
 
@@ -442,12 +482,10 @@ function render(){
     el.querySelector('.who').textContent = live ? state.usedJoker.name : '';
   });
 
-  const pl = document.getElementById('players');
   const namen = Object.keys(state.players);
-  pl.innerHTML = namen.map(n => {
+  const datensaetze = namen.map(n => {
     const p = state.players[n];
     const a = state.answers[n];
-    const av = avatarFor(n);
 
     let stateCls = '', stateTxt = 'offen';
     if(a != null){
@@ -461,34 +499,18 @@ function render(){
       }
     }
 
-    const jk = ['5050','spy','risk'].map(t => {
-      const ico = {
-        '5050':'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
-        'spy':'<svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg>',
-        'risk':'<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3.4" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="15" r="1.6" fill="currentColor"/></svg>'
-      }[t];
-      const jetzt = state.usedJoker && state.usedJoker.name === n && state.usedJoker.typ === t;
-      const cls = ['j'+t];
-      if(!p.jokers[t] && !jetzt) cls.push('spent');
-      if(jetzt) cls.push('now');
-      return `<span class="${cls.join(' ')}">${ico}</span>`;
-    }).join('');
-
-    const cardCls = ['p'];
+    const cardCls = [];
     if(aufgeloest && a != null && q){
       cardCls.push(a === q.richtig ? 'correct' : 'wrong');
     }
 
-    return `<div class="${cardCls.join(' ')}">
-      <span class="state ${stateCls}">${stateTxt}</span>
-      <span class="jks">${jk}</span>
-      ${av ? `<img src="${av}" alt="">` : ''}
-      <span class="info">
-        <span class="nm">${n}</span>
-        <span class="pts">${p.score}</span>
-      </span>
-    </div>`;
-  }).join('');
+    return Object.assign({}, p, {
+      name: n,
+      __stateCls: stateCls, __stateTxt: stateTxt,
+      __cardCls: cardCls.join(' '), __usedJoker: state.usedJoker
+    });
+  });
+  wwmSpielerListe.render(datensaetze);
 }
 
 async function tick(){ await load(); render(); }
