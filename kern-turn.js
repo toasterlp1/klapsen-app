@@ -42,11 +42,9 @@
 
     function aktualisieren({ name, avatarUrl, suffix = "'S TURN" }) {
       if (!name) { verstecken(); return; }
-      // Bild nur wechseln, wenn es sich wirklich geaendert hat
       if (avatarUrl && img.getAttribute('src') !== avatarUrl) img.src = avatarUrl;
       img.style.display = avatarUrl ? '' : 'none';
       KernRender.textWennGeaendert(nameEl, `${name.toUpperCase()} `);
-      // Suffix als eigenes Span, damit der Name allein aktualisiert wird
       let suf = nameEl.querySelector('.kern-turn-suffix');
       if (!suf) {
         suf = document.createElement('span');
