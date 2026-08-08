@@ -10,6 +10,7 @@
 <script src="../eingabeschutz.js"></script>
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
+<script src="../kern-korrektur.js"></script>
 <script src="../avatare.js"></script>
 <script src="../runden.js"></script>
 <style>
@@ -44,6 +45,7 @@
   .echt{color:var(--good);font-weight:800;}
 </style>
 <link rel="stylesheet" href="../responsive.css" />
+<link rel="stylesheet" href="../kern-korrektur.css" />
 </head>
 <body>
 
@@ -81,6 +83,11 @@
       Löscht alle bisherigen Runden und die Gesamtpunkte für Bluff-Quiz. Andere Formate sind davon nicht betroffen.
     </div>
   </div>
+
+  <div class="box">
+    <label>Manuelle Korrektur</label>
+    <div id="korrekturPanel"></div>
+  </div>
 </div>
 
 <script src="fragen.js"></script>
@@ -88,6 +95,16 @@
 <script>
 const sb = window.KA_SB;
 const $ = id => document.getElementById(id);
+
+// Freier Eingriff: manueller Korrektur-Eintrag in derselben
+// 'ergebnisse'-Tabelle wie die normale Punktevergabe.
+KernKorrektur.einbauen({
+  container: document.getElementById('korrekturPanel'),
+  spieler: () => (typeof AVATARE !== 'undefined') ? Object.keys(AVATARE) : [],
+  aufPunkteAendern: async (name, delta) => {
+    await sb.from('ergebnisse').insert({ format: 'bluff-quiz', spieler: name, punkte: delta });
+  }
+});
 
 let rundeId = null;
 let phase = 'luegen';
