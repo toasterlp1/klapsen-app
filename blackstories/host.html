@@ -11,6 +11,7 @@
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
   :root{ --u: 1vw; }
@@ -392,22 +393,32 @@ function applyState(s){
   renderScoreboard(s);
 }
 
+const scoreboardListe = KernRender.liste(document.getElementById('scoreboard'), {
+  schluessel: p => p.name,
+  erstellen: p => {
+    const avatarUrl = avatarFor(p.name);
+    const el = document.createElement('div');
+    el.className = 'score-pill';
+    el.innerHTML = `
+      <span class="turn-dot"></span>
+      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}">` : ''}
+      <span class="name"></span>
+      <span class="score"></span>`;
+    return el;
+  },
+  aktualisieren: (el, p) => {
+    el.className = `score-pill ${p.__dran ? 'turn' : ''}`;
+    KernRender.textWennGeaendert(el.querySelector('.name'), escapeHtml(p.name));
+    KernRender.textWennGeaendert(el.querySelector('.score'), p.score);
+  }
+});
+
 function renderScoreboard(s){
-  const board = document.getElementById('scoreboard');
   const players = (s.players && s.players.length) ? s.players : [];
   const turnIndex = s.turnIndex;
   const showTurn = s.meta && s.meta.phase === 'active';
-  board.innerHTML = players.map((p, i) => {
-    const avatarUrl = avatarFor(p.name);
-    return `
-    <div class="score-pill ${showTurn && i === turnIndex ? 'turn' : ''}">
-      <span class="turn-dot"></span>
-      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}">` : ''}
-      <span class="name">${escapeHtml(p.name)}</span>
-      <span class="score">${p.score}</span>
-    </div>
-  `;
-  }).join('');
+  const datensaetze = players.map((p, i) => Object.assign({}, p, { __dran: showTurn && i === turnIndex }));
+  scoreboardListe.render(datensaetze);
 }
 
 function escapeHtml(str){
