@@ -330,6 +330,30 @@ let currentIndex = null;
 let state = null;
 const kernBuzzListe = KernTurn.buzzListe(document.getElementById('kernBuzzListeSlot'), { titel: 'BUZZ ORDER' });
 
+// Scoreboard ruhig verwalten - Avatare werden nur beim ersten
+// Anlegen geladen, kein Neuaufbau bei jedem Realtime-Tick.
+const morphScoreboardListe = KernRender.liste(document.getElementById('scoreboard'), {
+  schluessel: p => p.name,
+  erstellen: p => {
+    const avatarUrl = avatarFor(p.name);
+    const el = document.createElement('div');
+    el.style.position = 'relative';
+    el.innerHTML = `
+      <span class="ka-badge-tr" style="display:none;"></span>
+      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:6px;">` : ''}
+      <div class="name"></div><div class="score"></div>`;
+    return el;
+  },
+  aktualisieren: (el, p) => {
+    el.className = `player-card ${p.__active?'active ka-live-green':''} ${p.__out?'out':''}`;
+    const badge = el.querySelector('.ka-badge-tr');
+    badge.style.display = p.__active ? '' : 'none';
+    if(p.__active && !badge.innerHTML) badge.innerHTML = KA.mic();
+    KernRender.textWennGeaendert(el.querySelector('.name'), p.name);
+    KernRender.textWennGeaendert(el.querySelector('.score'), p.score);
+  }
+});
+
 function currentPoints(elapsed){
   const t = Math.max(0, Math.min(1, elapsed / PUNKTE_DAUER_MS));
   return Math.max(MIN_PUNKTE, Math.ceil(MAX_PUNKTE - t * (MAX_PUNKTE - MIN_PUNKTE)));
@@ -399,16 +423,12 @@ function render(){
   }
   fxLetzteLoesung = loesungSchluessel;
 
-  scoreboardEl.innerHTML = Object.entries(players).map(([name,score])=>{
-    const isActive = name===active && !solved;
-    const isOut = buzzedOut.includes(name) && !solved;
-    const avatarUrl = avatarFor(name);
-    return `<div class="player-card ${isActive?'active ka-live-green':''} ${isOut?'out':''}" style="position:relative;">
-      ${isActive ? `<span class="ka-badge-tr">${KA.mic()}</span>` : ''}
-      ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}" style="margin-bottom:6px;">` : ''}
-      <div class="name">${name}</div><div class="score">${score}</div>
-    </div>`;
-  }).join('');
+  const datensaetze = Object.entries(players).map(([name,score]) => ({
+    name, score,
+    __active: name===active && !solved,
+    __out: buzzedOut.includes(name) && !solved
+  }));
+  morphScoreboardListe.render(datensaetze);
 
   activeBuzzerEl.textContent = active && !solved ? active + ' ist dran!' : '';
   activeBuzzerEl.classList.toggle('show', !!(active && !solved));
