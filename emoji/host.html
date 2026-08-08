@@ -336,6 +336,34 @@ let letzteScores = {};
 
 let state = null;
 const kernBuzzListe = KernTurn.buzzListe(document.getElementById('kernBuzzListeSlot'), { titel: 'BUZZ ORDER' });
+
+// Scoreboard ruhig verwalten - kein Neuaufbau bei jedem Realtime-Tick.
+const emojiScoreboardListe = KernRender.liste(document.getElementById('scoreboard'), {
+  schluessel: p => p.name,
+  erstellen: p => {
+    const avatarUrl = avatarFor(p.name);
+    const initial = p.name.charAt(0).toUpperCase();
+    const el = document.createElement('div');
+    el.innerHTML = `
+      <div class="avatar-ring" style="position:relative;">
+        <span class="ka-badge-tr" style="display:none;"></span>
+        ${avatarUrl ? `<img src="${avatarUrl}" alt="">` : `<div class="fallback">${initial}</div>`}
+      </div>
+      <div class="name"></div>
+      <div class="score"></div>`;
+    return el;
+  },
+  aktualisieren: (el, p) => {
+    el.className = `player-card ${p.__active?'active':''} ${p.__out?'out':''}`;
+    const ring = el.querySelector('.avatar-ring');
+    ring.classList.toggle('ka-live-green', !!p.__active);
+    const badge = ring.querySelector('.ka-badge-tr');
+    badge.style.display = p.__active ? '' : 'none';
+    if(p.__active && !badge.innerHTML) badge.innerHTML = KA.mic();
+    KernRender.textWennGeaendert(el.querySelector('.name'), p.name);
+    KernRender.textWennGeaendert(el.querySelector('.score'), p.score);
+  }
+});
 animateBar();
 let lastRevealedCount = 0;
 let lastRiddleIndex = null;
@@ -399,20 +427,12 @@ function render(){
     fxBuzzedOutGesehen = [...buzzedOut];
   }
 
-  scoreboardEl.innerHTML = Object.entries(players).map(([name,score])=>{
-    const isActive = name===active && !solved;
-    const isOut = buzzedOut.includes(name) && !solved;
-    const avatarUrl = avatarFor(name);
-    const initial = name.charAt(0).toUpperCase();
-    return `<div class="player-card ${isActive?'active':''} ${isOut?'out':''}">
-      <div class="avatar-ring ${isActive?'ka-live-green':''}" style="position:relative;">
-        ${isActive ? `<span class="ka-badge-tr">${KA.mic()}</span>` : ''}
-        ${avatarUrl ? `<img src="${avatarUrl}" alt="">` : `<div class="fallback">${initial}</div>`}
-      </div>
-      <div class="name">${name}</div>
-      <div class="score" id="score-${name.replace(/[^a-zA-Z0-9]/g,'_')}">${score}</div>
-    </div>`;
-  }).join('');
+  const datensaetze = Object.entries(players).map(([name,score]) => ({
+    name, score,
+    __active: name===active && !solved,
+    __out: buzzedOut.includes(name) && !solved
+  }));
+  emojiScoreboardListe.render(datensaetze);
 
   Object.entries(players).forEach(([name,score])=>{
     const prev = letzteScores[name];
