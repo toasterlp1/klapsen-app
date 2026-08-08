@@ -11,6 +11,7 @@
 <script src="../auth.js"></script>
 <script src="../turnier.js"></script>
 <script src="../avatare.js"></script>
+<script src="../kern-render.js"></script>
 <script src="../symbole.js"></script>
 <style>
   /* Handy-Skalierung: Bezugsgroesse wechselt hochkant auf die Hoehe */
@@ -622,33 +623,60 @@ sb.channel('hl_state_channel_host')
     anwenden(payload.new.state);
   }).subscribe();
 
-function renderLives(){
-  const strip = document.getElementById('livesStrip');
-  strip.innerHTML = players.map(p=>{
-    const crit = p.lives === 1;
-    const heartsHtml = Array.from({length:3}, (_, i)=>{
-      const filled = i < p.lives;
-      return heartSvg(filled ? `full${crit && i === p.lives-1 ? ' crit' : ''}` : 'empty');
-    }).join('');
+// Spieler-Karten ruhig verwalten - Avatare werden nur beim ersten
+// Anlegen geladen. Der bisherige Flash-Effekt blieb erhalten, feuert
+// aber nur noch, wenn sich wirklich etwas geaendert hat (nicht bei
+// jedem Realtime-Tick).
+const livesListe = KernRender.liste(document.getElementById('livesStrip'), {
+  schluessel: p => p.name,
+  erstellen: p => {
     const avatarUrl = avatarFor(p.name);
-    const dran = (p.name === turnName && p.lives > 0);
     const initial = p.name ? p.name.charAt(0).toUpperCase() : '?';
-    return `<div class="player ${p.lives<=0?'dead':''} ${dran?'ka-live-green':''} ${crit?'crit':''}" style="position:relative;">
-      ${dran ? `<span class="ka-badge-tr">${KA.star()}</span>` : ''}
+    const el = document.createElement('div');
+    el.style.position = 'relative';
+    el.innerHTML = `
+      <span class="ka-badge-tr" style="display:none;"></span>
       ${avatarUrl ? `<img class="avatar-pic" src="${avatarUrl}">` : `<div class="avatar-pic avatar-fallback">${initial}</div>`}
-      <div class="name">${p.name}</div><div class="hearts">${heartsHtml}</div>
-    </div>`;
-  }).join('');
-  strip.classList.add('flash');
-  setTimeout(()=>strip.classList.remove('flash'), 260);
+      <div class="name"></div><div class="hearts"></div>`;
+    return el;
+  },
+  aktualisieren: (el, p) => {
+    const crit = p.lives === 1;
+    const dran = (p.name === turnName && p.lives > 0);
+    el.className = `player ${p.lives<=0?'dead':''} ${dran?'ka-live-green':''} ${crit?'crit':''}`;
+    KernRender.textWennGeaendert(el.querySelector('.name'), p.name);
+    const badge = el.querySelector('.ka-badge-tr');
+    badge.style.display = dran ? '' : 'none';
+    if(dran && !badge.innerHTML) badge.innerHTML = KA.star();
+    const heartsEl = el.querySelector('.hearts');
+    if(heartsEl.dataset.leben !== String(p.lives)){
+      heartsEl.innerHTML = Array.from({length:3}, (_, i)=>{
+        const filled = i < p.lives;
+        return heartSvg(filled ? `full${crit && i === p.lives-1 ? ' crit' : ''}` : 'empty');
+      }).join('');
+      heartsEl.dataset.leben = String(p.lives);
+    }
+  }
+});
 
+function renderLives(){
+  let geaendert = false;
   players.forEach(p=>{
     const prev = prevLives[p.name];
+    if(prev !== undefined && prev !== p.lives) geaendert = true;
     if(prev !== undefined && p.lives < prev && window.HOSTFX){
       HOSTFX.lifeLost(p.name, avatarFor(p.name));
     }
     prevLives[p.name] = p.lives;
   });
+
+  livesListe.render(players);
+
+  if(geaendert){
+    const strip = document.getElementById('livesStrip');
+    strip.classList.add('flash');
+    setTimeout(()=>strip.classList.remove('flash'), 260);
+  }
 }
 
 function updateCategoryName(){
